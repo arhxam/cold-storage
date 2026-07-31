@@ -91,9 +91,12 @@ X ~7 days), so grab them promptly.
 | **Facebook** | Same Accounts Center flow | Messenger E2EE chats need "Secure Storage" on + your PIN. |
 | **Discord** | Settings → Privacy & Safety → Request all my Data | Note: contains only *your half* of DMs (Discord's limit, not ours). |
 | **X / Twitter** | Settings → Your account → Download an archive | Link expires in ~7 days. |
+| **Telegram** | Telegram Desktop → Settings → Advanced → Export Telegram data | Choose **JSON**. Full chat history, zero risk. |
+| **Reddit** | reddit.com → Settings → Privacy → Request a copy of your data | CSV export; one request per 30 days. |
+| **WhatsApp** | In any chat → ⋮ → More → Export chat | Point `syt` at the exported `.txt` (with media). Fully local. |
 
-More connectors (Telegram, Google, Reddit, WhatsApp, Snapchat, Slack) are on the
-[roadmap](#roadmap).
+Run `syt connectors` to see everything supported. More (Google, Snapchat, Slack)
+are on the [roadmap](#roadmap).
 
 ## Your data & your keys
 
@@ -120,7 +123,8 @@ More connectors (Telegram, Google, Reddit, WhatsApp, Snapchat, Slack) are on the
 
 ## Roadmap
 
-- **Phase 1 (now):** engine + `syt` CLI + Instagram, Facebook, Discord, X. ✅
+- **Phase 1 (now):** engine + `syt` CLI + Instagram, Facebook, Discord, X,
+  Telegram, Reddit, WhatsApp. ✅
 - **Phase 2:** live connectors (Telegram, Reddit, Google), cloud sync (your own
   B2/Drive/Dropbox via `restic`+`rclone`), and a desktop app with a dashboard +
   browsable data viewer + a real download button.

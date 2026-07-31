@@ -148,3 +148,62 @@ def twitter_export(tmp_path) -> Path:
         encoding="utf-8",
     )
     return root
+
+
+@pytest.fixture
+def telegram_export(tmp_path) -> Path:
+    root = tmp_path / "tg_export"
+    write_json(
+        root / "result.json",
+        {
+            "about": "…",
+            "chats": {"list": [
+                {
+                    "name": "Pal",
+                    "type": "personal_chat",
+                    "id": 42,
+                    "messages": [
+                        {"id": 1, "type": "message", "date": "2021-01-01T12:00:00",
+                         "from": "Me", "from_id": "user1", "text": "hi there"},
+                        {"id": 2, "type": "message", "date": "2021-01-01T12:01:00",
+                         "from": "Pal", "from_id": "user2",
+                         "text": ["check ", {"type": "bold", "text": "this"}, " out"]},
+                        {"id": 3, "type": "service", "date": "2021-01-01T12:02:00"},
+                    ],
+                }
+            ]},
+        },
+    )
+    return root
+
+
+@pytest.fixture
+def reddit_export(tmp_path) -> Path:
+    root = tmp_path / "reddit_export"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "comments.csv").write_text(
+        "id,permalink,date,subreddit,body\n"
+        "c1,/r/python/x,2021-01-01,python,great post\n",
+        encoding="utf-8",
+    )
+    (root / "posts.csv").write_text(
+        "id,permalink,date,subreddit,title,body\n"
+        "p1,/r/python/y,2021-01-02,python,My title,my body\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+@pytest.fixture
+def whatsapp_export(tmp_path) -> Path:
+    root = tmp_path / "wa_export"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "WhatsApp Chat with Alice.txt").write_text(
+        "[2021-01-01, 12:00:00] Alice: Hello there\n"
+        "[2021-01-01, 12:00:05] Me: hi!\n"
+        "this is a second line\n"
+        "[2021-01-01, 12:01:00] Alice: IMG-0001.jpg (file attached)\n",
+        encoding="utf-8",
+    )
+    (root / "IMG-0001.jpg").write_bytes(b"JPEGDATA")
+    return root

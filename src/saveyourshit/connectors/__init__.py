@@ -1,6 +1,14 @@
 """Connector registry. Importing this package registers every built-in connector."""
 
-from . import discord, facebook, instagram, twitter  # noqa: F401  (register on import)
+from . import (  # noqa: F401  (register on import)
+    discord,
+    facebook,
+    instagram,
+    reddit,
+    telegram,
+    twitter,
+    whatsapp,
+)
 from .base import (
     Connector,
     all_connectors,
