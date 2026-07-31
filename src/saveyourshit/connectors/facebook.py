@@ -22,7 +22,14 @@ class FacebookConnector(Connector):
 
     def detect(self, path: Path) -> bool:
         path = Path(path)
-        markers = ["your_facebook_activity", "friends_and_followers", "personal_information"]
+        # Facebook-specific markers only. NOTE: do NOT use "personal_information"
+        # — it also appears in Instagram exports and would mis-detect them.
+        # "friends_and_followers" is FB-only (Instagram uses "followers_and_following").
+        markers = [
+            "your_facebook_activity",
+            "your_activity_across_facebook",
+            "friends_and_followers",
+        ]
         return any((path / m).exists() or list(path.glob(f"**/{m}")) for m in markers)
 
     def parse_export(self, path: Path) -> Iterator[Batch]:

@@ -61,20 +61,29 @@ class SnapchatConnector(Connector):
                     continue
                 author = item.get("From")
                 thread = item.get("Conversation Title") or key
+                # Current exports store text in "Content"; older (~2022) exports
+                # used "Text". Support both.
+                text = item.get("Content")
+                if text is None:
+                    text = item.get("Text")
                 records.append(
                     NormalizedRecord(
                         connector=self.id,
                         type=RecordType.MESSAGE,
                         uid=f"chat:{key}:{i}",
                         created_at=_normalize_ts(item.get("Created")),
-                        text=item.get("Text"),
+                        text=text,
                         author=author,
                         thread=thread,
                         extra={
                             k: v
-                            for k, v in (("media_type", item.get("Media Type")),
-                                         ("to", item.get("To")))
-                            if v
+                            for k, v in (
+                                ("media_type", item.get("Media Type")),
+                                ("to", item.get("To")),
+                                ("is_sender", item.get("IsSender")),
+                                ("media_ids", item.get("Media IDs")),
+                            )
+                            if v is not None
                         },
                     )
                 )
