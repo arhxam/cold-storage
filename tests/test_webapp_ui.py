@@ -80,26 +80,93 @@ def test_polish_hooks_present():
         "spinner",
         "tabular-nums",
         "No results",
-        "No data yet",
+        "Nothing backed up yet",
         "No conversations",
         "@media (max-width:1100px)",
     ]:
         assert hook in INDEX_HTML, f"missing polish hook: {hook}"
 
 
-def test_blue_brand_system_is_used_in_the_ui():
-    assert "--brand:#2563eb" in INDEX_HTML.lower()
-    assert "--brand-strong:#1d4ed8" in INDEX_HTML.lower()
+def test_brand_mark_and_no_legacy_palettes():
     assert "function brandMark(" in INDEX_HTML
     assert 'aria-label="Save Your Shit"' in INDEX_HTML
-    assert "#d9a05b" not in INDEX_HTML.lower()
-    assert "#ecb873" not in INDEX_HTML.lower()
+    lowered = INDEX_HTML.lower()
+    for legacy in ("#d9a05b", "#ecb873", "#2563eb", "#1d4ed8"):
+        assert legacy not in lowered, f"legacy brand colour still present: {legacy}"
 
 
 def test_narrow_rail_and_empty_archive_copy_are_app_native():
     assert ".sec{ display:none; }" in INDEX_HTML
-    assert "Archive → Add Export" in INDEX_HTML
-    assert "run <code>syt ingest" not in INDEX_HTML
+    # The empty state routes people to the in-app Connect flow, not a native
+    # menu path — the app is the center of everything now.
+    assert "Connect a platform" in INDEX_HTML
+    assert "Archive → Add Export" not in INDEX_HTML
+
+
+def test_in_app_connect_flow_is_wired():
+    """The desktop app connects accounts and backs up without the CLI."""
+    # The native bridge + in-app flows.
+    assert "window.sytBridge" in INDEX_HTML
+    assert "function showConnect(" in INDEX_HTML
+    assert "BRIDGE.addExport" in INDEX_HTML
+    assert "handleIngest" in INDEX_HTML
+    # Integrated, draggable title bar that hosts the window controls.
+    assert "-webkit-app-region:drag" in INDEX_HTML
+    assert 'class="titlebar"' in INDEX_HTML
+
+
+def test_automation_controls_are_wired():
+    """Connect once, pick a frequency, and it runs itself."""
+    for hook in [
+        "BRIDGE.connect",
+        "BRIDGE.disconnect",
+        "BRIDGE.setSchedule",
+        "BRIDGE.syncNow",
+        "BRIDGE.syncAll",
+        "onAccounts",
+        "function acctState(",
+        "SCHEDULES",
+        "launchAtLogin",
+    ]:
+        assert hook in INDEX_HTML, f"missing automation hook: {hook}"
+    # Every schedule the scheduler understands is offered in the UI.
+    for freq in ("daily", "weekly", "monthly", "manual"):
+        assert f"'{freq}'" in INDEX_HTML
+    # Account state is rendered from data, never hardcoded per platform.
+    assert "ACCOUNTS" in INDEX_HTML
+
+
+def test_platform_marks_are_real_logos_not_letters():
+    """Each platform shows its own mark, drawn inline (works offline)."""
+    assert "PLATFORM_ICONS" in INDEX_HTML
+    for platform in (
+        "instagram",
+        "facebook",
+        "twitter",
+        "whatsapp",
+        "telegram",
+        "discord",
+        "reddit",
+        "google",
+        "snapchat",
+        "linkedin",
+        "slack",
+    ):
+        assert f"{platform}:{{" in INDEX_HTML.replace(" ", ""), f"no logo for {platform}"
+    # Drawn inline as SVG — never fetched from a CDN.
+    assert 'viewBox="0 0 24 24"' in INDEX_HTML
+    assert "<img" not in INDEX_HTML
+
+
+def test_shadcn_zinc_tokens():
+    """The UI uses the flat shadcn zinc-dark system, not the old blue gradients."""
+    lowered = INDEX_HTML.lower()
+    assert "--bg:#09090b" in lowered  # zinc-950
+    assert "--panel:#18181b" in lowered  # zinc-900
+    assert "--line:#27272a" in lowered  # zinc-800
+    # No leftover gradient-heavy brand chrome.
+    assert "linear-gradient(180deg,#3b82f6" not in lowered
+    assert "linear-gradient(160deg,#3b82f6" not in lowered
 
 
 def test_favicon_request_is_quiet(layout):
@@ -117,8 +184,14 @@ def test_safety_conventions():
     assert "data-i" in INDEX_HTML
     assert 'onclick="' not in INDEX_HTML
     assert "javascript:" not in INDEX_HTML
-    # No external resources: must work fully offline.
-    assert "http://" not in INDEX_HTML.replace("http://127.0.0.1", "")
-    assert "https://" not in INDEX_HTML
+    # No external resources are loaded — the UI works fully offline. The only
+    # remaining "http" strings are the SVG XML namespace (a constant identifier
+    # in inline data: URLs, never fetched) and the loopback API base.
+    offline = INDEX_HTML.replace("http://127.0.0.1", "").replace(
+        "http://www.w3.org/2000/svg", ""
+    )
+    assert "http://" not in offline
+    assert 'src="http' not in INDEX_HTML  # no external <script>/<img>
+    assert "url(http" not in INDEX_HTML  # no external CSS url()
     assert "@import" not in INDEX_HTML
     assert "<link" not in INDEX_HTML

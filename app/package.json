@@ -8,6 +8,7 @@
   "author": "Save Your Shit contributors",
   "scripts": {
     "start": "electron .",
+    "test": "node test/reliability.test.js && electron test/automation.test.js",
     "dist": "electron-builder --mac --arm64"
   },
   "devDependencies": {
@@ -20,6 +21,11 @@
     "productName": "Save Your Shit",
     "files": [
       "main.js",
+      "preload.js",
+      "platforms.js",
+      "automation.js",
+      "store.js",
+      "queue.js",
       "package.json",
       "entitlements.mac.plist",
       "assets/icon.icns"
