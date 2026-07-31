@@ -150,12 +150,19 @@ INDEX_HTML = r"""<!doctype html>
 
   /* ---- rail: platforms ---- */
   .rail{ background:var(--rail); border-right:1px solid var(--line); padding:16px 12px; overflow:auto; }
-  .brand{ display:flex; align-items:center; gap:9px; font-weight:700; font-size:16px; padding:6px 8px 14px; }
-  .rail a{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px;
-           color:var(--text); cursor:pointer; margin-bottom:2px; font-size:13.5px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:650; font-size:15px;
+          letter-spacing:-.01em; padding:4px 8px 16px; }
+  .brand .mark{ width:26px; height:26px; border-radius:8px; flex:none;
+                background:linear-gradient(160deg,var(--accent2),var(--accent));
+                display:grid; place-items:center; }
+  .rail a{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px;
+           color:var(--text); cursor:pointer; margin-bottom:1px; font-size:13.5px; }
   .rail a:hover{ background:var(--hover); }
-  .rail a.active{ background:#1d2740; color:#fff; box-shadow:inset 2px 0 0 var(--accent2); }
-  .rail a .ico{ width:22px; text-align:center; font-size:15px; }
+  .rail a.active{ background:#1c2333; color:#fff; }
+  .rail a .ico{ width:22px; height:22px; flex:none; display:grid; place-items:center; }
+  .tile{ width:22px; height:22px; border-radius:6px; display:grid; place-items:center;
+         font-size:11px; font-weight:700; color:#fff; }
+  .tile.lg{ width:30px; height:30px; border-radius:8px; font-size:14px; }
   .rail a .nm{ flex:1; text-transform:capitalize; }
   .rail a .ct{ font-size:11px; color:var(--dim2); background:#0a0c12; padding:1px 7px; border-radius:20px; }
   .rail .sec{ color:var(--dim2); font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;
@@ -165,7 +172,8 @@ INDEX_HTML = r"""<!doctype html>
   /* ---- middle: conversations ---- */
   .list{ background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
   .list .hd{ padding:16px 16px 10px; border-bottom:1px solid var(--line); }
-  .list .hd h2{ margin:0 0 10px; font-size:16px; text-transform:capitalize; }
+  .list .hd h2{ margin:0 0 10px; font-size:16px; text-transform:capitalize;
+                display:flex; align-items:center; gap:9px; }
   .search{ width:100%; background:var(--panel2); border:1px solid var(--line2); color:var(--text);
            border-radius:9px; padding:8px 11px; font-size:13px; outline:none; }
   .search:focus{ border-color:var(--accent); }
@@ -232,10 +240,12 @@ INDEX_HTML = r"""<!doctype html>
   <section class="pane" id="pane"><div class="empty">Loading your archive…</div></section>
 </div>
 <script>
-const EMOJI={instagram:"📸",facebook:"👤",discord:"🎮",twitter:"🐦",telegram:"✈️",
-  reddit:"👽",whatsapp:"💬",google:"🔴",slack:"💼",snapchat:"👻",linkedin:"🔗"};
+const BRAND={instagram:"#e4405f",facebook:"#1877f2",discord:"#5865f2",twitter:"#1d9bf0",
+  telegram:"#229ed9",reddit:"#ff4500",whatsapp:"#25d366",google:"#4285f4",slack:"#611f69",
+  snapchat:"#c9b400",linkedin:"#0a66c2"};
 const AV=["#e0567a","#f0883e","#3ddc84","#3d7bfd","#a06bff","#00b8c4","#ff6b6b","#f2c14e"];
-function emo(id){return EMOJI[id]||"🗂";}
+function brandColor(id){return BRAND[id]||"#3d4152";}
+function tile(id,cls){return `<span class="tile ${cls||''}" style="background:${brandColor(id)}">${(id[0]||'?').toUpperCase()}</span>`;}
 function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
 function avColor(s){let h=0;for(const c of (s||'?'))h=(h*31+c.charCodeAt(0))>>>0;return AV[h%AV.length];}
 function initial(s){return (s||'?').trim()[0]?.toUpperCase()||'?';}
@@ -249,13 +259,20 @@ async function boot(){
   renderRail(); showDashboard();
 }
 function renderRail(){
-  let h=`<div class="brand">🛟 Save Your Shit</div>`;
-  h+=`<a class="${active?'':'active'}" onclick="showDashboard()"><span class="ico">🏠</span><span class="nm">Dashboard</span></a>`;
+  const logo=`<span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span>`;
+  let h=`<div class="brand">${logo}Save Your Shit</div>`;
+  h+=`<a class="${active?'':'active'}" onclick="showDashboard()"><span class="ico">`
+    +`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`
+    +` stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/>`
+    +`<rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>`
+    +`<rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="nm">Overview</span></a>`;
   h+=`<div class="sec">Platforms</div>`;
   for(const c of STATUS.connectors){
     const col=c.stale?'var(--warn)':(c.last_status==='error'?'var(--bad)':'var(--good)');
     h+=`<a class="${active===c.connector?'active':''}" onclick="openConnector('${c.connector}')">
-      <span class="ico">${emo(c.connector)}</span><span class="nm">${esc(c.connector)}</span>
+      <span class="ico">${tile(c.connector)}</span><span class="nm">${esc(c.connector)}</span>
       <span class="dot" style="background:${col}"></span><span class="ct">${c.records.toLocaleString()}</span></a>`;
   }
   document.getElementById('rail').innerHTML=h;
@@ -266,14 +283,15 @@ function showDashboard(){
   document.querySelector('.app').style.gridTemplateColumns='236px 1fr';
   const s=STATUS;
   const cards=s.connectors.map(c=>{
-    const st=c.last_status===null?'never run':(c.stale?'⚠ stale':(c.last_status==='error'?'error':'✓ up to date'));
+    const col=c.stale?'var(--warn)':(c.last_status==='error'?'var(--bad)':'var(--good)');
+    const st=c.last_status===null?'Never run':(c.stale?'Stale':(c.last_status==='error'?'Error':'Up to date'));
     return `<div class="pcard" onclick="openConnector('${c.connector}')">
-      <div class="h">${emo(c.connector)} ${esc(c.connector)}</div>
+      <div class="h">${tile(c.connector)} ${esc(c.connector)}</div>
       <div class="n">${c.records.toLocaleString()}</div>
-      <div class="s">${st} · ${fmtRel(c.last_run_at)||'—'}</div></div>`;}).join('');
+      <div class="s"><span class="dot" style="background:${col}"></span> ${st} · ${fmtRel(c.last_run_at)||'—'}</div></div>`;}).join('');
   document.getElementById('pane').innerHTML=`<div class="dash">
     <h1>Your archive</h1>
-    <div class="sub">${s.encrypted?'🔒 encrypted':'⚠ not encrypted'} · lives on your machine at <code>${esc(s.home)}</code></div>
+    <div class="sub">${s.encrypted?'Encrypted':'Not encrypted'} · lives on your machine at <code>${esc(s.home)}</code></div>
     <div class="stats">
       <div class="stat"><div class="n">${s.total_records.toLocaleString()}</div><div class="l">items</div></div>
       <div class="stat"><div class="n">${s.connectors.length}</div><div class="l">platforms</div></div>
@@ -295,7 +313,7 @@ async function openConnector(id){
   for(const [ty,label] of [['follower','Followers'],['following','Following'],['post','Posts'],['saved','Saved']]){
     if(tc[ty]) specials.push({ty,label,count:tc[ty]});
   }
-  list.innerHTML=`<div class="hd"><h2>${emo(id)} ${esc(id)}</h2>
+  list.innerHTML=`<div class="hd"><h2>${tile(id)} ${esc(id)}</h2>
       <input class="search" id="q" placeholder="Search ${esc(id)}…" oninput="filterThreads()"></div>
     <div class="rows" id="rows"></div>`;
   window._specials=specials;
