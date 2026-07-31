@@ -10,15 +10,39 @@ Connect an account once. It requests your official export, downloads it, and fil
 away on a schedule. Instagram, Facebook, X, Google, Snapchat, LinkedIn, Reddit — plus
 Discord, Telegram, WhatsApp and Slack by hand.
 
-<a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-09090b?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac"></a>
+<a href="https://github.com/arhxam/save-your-shit/releases/latest/download/SaveYourShit-macOS-arm64.dmg"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Mac-Apple%20Silicon%20·%20free-0a84ff?style=for-the-badge&logoColor=white" alt="Download Save Your Shit for Mac" height="46"></a>
 
-<sub>Apple Silicon · signed and notarized by Apple — open the DMG, drag to Applications.<br>No Terminal, no right-click workaround, no Gatekeeper warning.</sub>
+<sub>**Signed and notarized by Apple.** Open the DMG, drag to Applications, done.<br>
+No Terminal, no right-click workaround, no security warning.</sub>
+
+<br><br>
+
+<a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/github/v/release/arhxam/save-your-shit?label=latest&color=0a84ff" alt="Latest release"></a>
+<img src="https://img.shields.io/badge/macOS-13%2B%20(Apple%20Silicon)-999" alt="macOS 13+ Apple Silicon">
+<img src="https://img.shields.io/badge/license-MIT-999" alt="MIT licensed">
+<img src="https://img.shields.io/badge/servers-none-2ea043" alt="No servers">
 
 </div>
 
 <br>
 
 <p align="center"><img src="docs/screenshots/accounts.png" alt="Accounts — connect once, pick a frequency, and it runs itself" width="900"></p>
+
+## Install
+
+**Mac app — [⬇ Download the DMG](https://github.com/arhxam/save-your-shit/releases/latest/download/SaveYourShit-macOS-arm64.dmg)** (Apple Silicon, ~110 MB)
+
+Open it, drag **Save Your Shit** to Applications, and open it from there. It's
+signed and notarized, so it just opens — no right-click, no warning. On first
+launch it sets up your encrypted archive and puts a Recovery Kit on your Desktop.
+
+**Command line** — same engine, any platform with Python:
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/arhxam/save-your-shit/master/install.sh | sh
+```
+
+<sub>Prefer to inspect first? [Read the installer](install.sh) · [all downloads](https://github.com/arhxam/save-your-shit/releases/latest) · Windows and Linux app builds aren't ready yet.</sub>
 
 ## Why
 
@@ -117,11 +141,7 @@ machine, it is the only way back in. There is no reset link — that's the point
 
 ## Command line
 
-The engine is also a CLI, if you prefer typing:
-
-```bash
-curl -LsSf https://raw.githubusercontent.com/arhxam/save-your-shit/master/install.sh | sh
-```
+Everything the app does, `syt` does too:
 
 ```bash
 syt init                              # set up, save your Recovery Kit
@@ -174,7 +194,14 @@ npm start                      # run the desktop app
 npm run dist                   # build an unsigned DMG
 ./release.sh                   # build, sign and notarize (needs a Developer ID)
 ./verify-dmg.sh                # check a built DMG the way a downloader's Mac will
+./publish.sh v0.3.1            # verify, then publish it as a GitHub release
 ```
+
+`publish.sh` uploads the disk image twice: once under its versioned name, and
+once as `SaveYourShit-macOS-arm64.dmg`. That second name is what the download
+button at the top of this page points at, through
+`/releases/latest/download/…` — a URL that keeps working across every future
+release. Publishing by hand and forgetting it silently 404s the button.
 
 Building the Mac app bundles a frozen copy of the engine — rebuild it with
 `cd packaging && uv run pyinstaller syt.spec --noconfirm --distpath ../dist` after
