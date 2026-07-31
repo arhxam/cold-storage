@@ -9,6 +9,14 @@ encrypted on *your* disk. No server. No account. Nothing ever leaves your machin
 Because when a platform bans you, its "Download your data" button stops working too.
 The backup has to already exist.
 
+<br>
+
+<a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-0a0b0f?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac (Apple Silicon)"></a>
+
+*The Mac app is unsigned for now, so the first open is: right-click the app → Open
+(or run `xattr -d com.apple.quarantine "/Applications/Save Your Shit.app"` once).
+Prefer the terminal? The CLI install is below.*
+
 </div>
 
 <p align="center">
@@ -65,10 +73,10 @@ uv tool install --from git+https://github.com/arhxam/save-your-shit "saveyourshi
 # after the first PyPI release this becomes simply:  pipx install saveyourshit
 ```
 
-> **Download button coming:** signed desktop installers (`.dmg`/`.exe`/`.AppImage`)
-> with a dashboard + data viewer land in Phase 2 — see [the roadmap](#roadmap).
-> Until then, tagged releases attach built packages under
-> [Releases](https://github.com/arhxam/save-your-shit/releases).
+> **Prefer clicking to typing?** The [Mac app](https://github.com/arhxam/save-your-shit/releases/latest)
+> above does all of this for you — it sets up the encrypted archive on first launch
+> and you add exports with **Archive → Add Export…** (or drag them onto the window).
+> Windows/Linux builds are on [the roadmap](#roadmap).
 
 ## How it works
 

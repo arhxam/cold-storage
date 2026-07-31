@@ -5,6 +5,12 @@ __pycache__/
 .eggs/
 build/
 dist/
+# PyInstaller (spec files in packaging/ ARE committed; build output is not)
+*.spec
+!packaging/*.spec
+# Electron app
+app/node_modules/
+app/release/
 # Virtual envs
 .venv/
 venv/

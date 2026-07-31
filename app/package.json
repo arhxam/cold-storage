@@ -1,0 +1,54 @@
+{
+  "name": "save-your-shit",
+  "productName": "Save Your Shit",
+  "version": "0.1.0",
+  "description": "Local-first backup for your own social-media data. No server.",
+  "main": "main.js",
+  "license": "MIT",
+  "author": "Save Your Shit contributors",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --arm64"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.saveyourshit.app",
+    "afterPack": "./after-pack.js",
+    "productName": "Save Your Shit",
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/syt",
+        "to": "syt"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "sign": false
+    },
+    "directories": {
+      "output": "release"
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
