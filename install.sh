@@ -19,7 +19,9 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 echo "→ installing the 'syt' command…"
-uv tool install --from "git+${REPO}" "saveyourshit[keyring]"
+# PEP 508 direct reference: package + extras "@ " git source. (Do NOT combine
+# `--from git+…` with a `pkg[extra]` argument — uv rejects that as conflicting.)
+uv tool install --force "saveyourshit[keyring] @ git+${REPO}"
 
 echo ""
 echo "✓ Installed. Get started with:"
