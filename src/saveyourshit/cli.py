@@ -315,6 +315,68 @@ def recover(
 
 
 @app.command()
+def sync(
+    remote: str | None = typer.Option(
+        None, help="rclone remote to mirror to, e.g. b2:my-bucket/syt (default: config)."
+    ),
+    repo: Path | None = typer.Option(None, help="restic repo location (default: alongside home)."),
+    init_repo: bool = typer.Option(False, "--init", help="Initialize the restic repo first."),
+    passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
+) -> None:
+    """Back up your archive to an encrypted restic repo and optionally your own cloud.
+
+    Requires the optional `restic` (and `rclone` for cloud) binaries. Everything
+    stays encrypted end to end; your cloud provider only ever sees ciphertext.
+    """
+    from .sync import RcloneRemote, ResticRepo, SyncToolMissing
+
+    rt = _runtime(passphrase)
+    repo_loc = repo or (rt.layout.home.parent / f"{rt.layout.home.name}-restic")
+    restic = ResticRepo(repo_loc)
+    if not restic.is_available():
+        _fail(
+            "restic isn't installed (it's optional). Install it from https://restic.net "
+            "to enable versioned encrypted backups."
+        )
+    if rt.cipher is not None:
+        restic_pw = rt.cipher.derived_secret(b"restic")
+    elif passphrase:
+        restic_pw = passphrase
+    else:
+        _fail("need a passphrase to derive the restic key (pass --passphrase or enable encryption)")
+
+    try:
+        if init_repo:
+            with console.status("Initializing restic repo…"):
+                restic.init(restic_pw)
+        with console.status("Snapshotting your archive…"):
+            res = restic.snapshot([rt.layout.home], restic_pw, tags=["syt"])
+        if not res.ok:
+            _fail(f"restic backup failed: {res.stderr.strip()[:400]}")
+        console.print("[green]✓[/] Local encrypted snapshot done.")
+
+        remote = remote or rt.config.cloud_remote
+        if remote:
+            rclone = RcloneRemote()
+            if not rclone.is_available():
+                _fail(
+                    "rclone isn't installed (optional). "
+                    "Install from https://rclone.org for cloud sync."
+                )
+            with console.status(f"Syncing to {remote}…"):
+                rres = rclone.copy(repo_loc, remote)
+            if not rres.ok:
+                _fail(f"cloud sync failed: {rres.stderr.strip()[:400]}")
+            console.print(f"[green]✓[/] Mirrored to [bold]{remote}[/] (ciphertext only).")
+        else:
+            console.print(
+                "[dim]No cloud remote set. Configure one and re-run to mirror offsite.[/]"
+            )
+    except SyncToolMissing as e:
+        _fail(str(e))
+
+
+@app.command()
 def schedule(
     every: str = typer.Option("daily", help="daily | weekly."),
     remove: bool = typer.Option(False, "--remove", help="Remove the scheduled reminder."),
@@ -324,6 +386,7 @@ def schedule(
     (Phase 1 exports are user-triggered, so this schedules a staleness check — not
     an automatic fetch. Automatic fetching arrives with the live connectors.)
     """
+    import os
     import shutil
     import sys
 
@@ -331,10 +394,13 @@ def schedule(
 
     label = "com.saveyourshit.reminder"
     syt_path = shutil.which("syt") or f"{sys.executable} -m saveyourshit"
+    plist_dir = Path(os.environ["SYT_LAUNCHAGENTS_DIR"]) if os.environ.get(
+        "SYT_LAUNCHAGENTS_DIR"
+    ) else None
 
     if remove:
         if sys.platform == "darwin":
-            removed = scheduler.uninstall_macos(label)
+            removed = scheduler.uninstall_macos(label, plist_dir=plist_dir)
             console.print("[green]✓[/] Removed." if removed else "[dim]Nothing to remove.[/]")
         else:
             console.print("Remove the cron/Task Scheduler entry you added for `syt status`.")
@@ -345,7 +411,9 @@ def schedule(
     interval = 86400 if every == "daily" else 604800
 
     if sys.platform == "darwin":
-        path = scheduler.install_macos(label, [*syt_path.split(), "status"], interval)
+        path = scheduler.install_macos(
+            label, [*syt_path.split(), "status"], interval, plist_dir=plist_dir
+        )
         console.print(f"[green]✓[/] Installed launchd reminder at [dim]{path}[/]")
         console.print(f"  Activate it now with:  [bold]launchctl load {path}[/]")
     elif sys.platform.startswith("linux"):

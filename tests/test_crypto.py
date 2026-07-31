@@ -62,6 +62,16 @@ def test_reset_passphrase_with_recovery(tmp_path):
     assert km.unlock("brandnew").decrypt(blob) == b"w"
 
 
+def test_derived_secret_is_stable_and_scoped(tmp_path):
+    km = KeyManager(tmp_path / "keys")
+    cipher, _ = km.create("pw")
+    s1 = cipher.derived_secret(b"restic")
+    s2 = km.unlock("pw").derived_secret(b"restic")
+    assert s1 == s2  # stable across unlocks
+    assert cipher.derived_secret(b"other") != s1  # scoped by context
+    assert len(s1) == 64  # sha256 hex
+
+
 def test_cannot_create_twice(tmp_path):
     km = KeyManager(tmp_path / "keys")
     km.create("a")

@@ -48,6 +48,14 @@ class Cipher:
         nonce, ct = blob[:NONCE_BYTES], blob[NONCE_BYTES:]
         return self._aead.decrypt(nonce, ct, aad)
 
+    def derived_secret(self, context: bytes) -> str:
+        """A stable hex secret derived from the master key (never the key itself).
+
+        Used to give tools like restic a passphrase that is available whenever the
+        archive is unlocked, without handing them the raw encryption key.
+        """
+        return hashlib.sha256(self._key + b"|" + context).hexdigest()
+
     def wrap(self, other_key: bytes) -> bytes:
         """Encrypt another key with this one (key-wrapping)."""
         return self.encrypt(other_key)

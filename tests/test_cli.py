@@ -110,3 +110,22 @@ def test_doctor(home):
     assert r.exit_code == 0
     assert "initialized" in r.output
     assert "restic" in r.output
+
+
+def test_sync_without_restic_is_graceful(home, monkeypatch):
+    # restic isn't installed in the test/CI environment → friendly failure, not a crash
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    runner.invoke(app, ["init", "--no-encrypt"])
+    r = runner.invoke(app, ["sync"])
+    assert r.exit_code != 0
+    assert "restic" in r.output.lower()
+
+
+def test_schedule_prints_or_installs(home, tmp_path, monkeypatch):
+    # never touch the real ~/Library/LaunchAgents
+    monkeypatch.setenv("SYT_LAUNCHAGENTS_DIR", str(tmp_path / "LaunchAgents"))
+    runner.invoke(app, ["init", "--no-encrypt"])
+    r = runner.invoke(app, ["schedule", "--every", "daily"])
+    assert r.exit_code == 0
+    # some actionable output regardless of platform
+    assert any(w in r.output.lower() for w in ("launchd", "cron", "schtasks", "reminder"))
