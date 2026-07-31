@@ -120,6 +120,9 @@ def ingest(
     scan_all: bool = typer.Option(
         False, "--all", help="Scan the folder and ingest every export inside (e.g. ~/Downloads)."
     ),
+    no_snapshot: bool = typer.Option(
+        False, "--no-snapshot", help="Don't keep a second raw copy of the export (saves disk)."
+    ),
     passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
 ) -> None:
     """Back up a downloaded data export. Auto-detects the platform.
@@ -130,21 +133,24 @@ def ingest(
     if not path.exists():
         _fail(f"no such file or folder: {path}")
     rt = _runtime(passphrase)
+    _warn_low_disk(rt.layout.home, path, keep_snapshot=not no_snapshot)
+    keep_snapshot = not no_snapshot
 
     if scan_all:
         with rt.open_archive() as archive, console.status(f"Scanning {path}…"):
-            results = Engine(archive).ingest_folder(path)
+            results = Engine(archive).ingest_folder(path, keep_snapshot=keep_snapshot)
         if not results:
             console.print(f"[yellow]No recognizable exports found in[/] {path}")
             return
         total = sum(r.added for r in results)
         for r in results:
-            console.print(f"[green]✓[/] {r.connector}: [bold]{r.added}[/] new items")
+            flag = " [yellow](partial)[/]" if r.status == "error" else ""
+            console.print(f"[green]✓[/] {r.connector}: [bold]{r.added}[/] new items{flag}")
         console.print(f"\n[bold]{total}[/] new items across {len(results)} export(s).")
         return
 
     with rt.open_archive() as archive, console.status(f"Ingesting {path.name}…"):
-        result = Engine(archive).ingest(path, connector_id=connector)
+        result = Engine(archive).ingest(path, connector_id=connector, keep_snapshot=keep_snapshot)
     if result.status == "error":
         err.print(f"[yellow]partial ingest:[/] {result.error}")
     console.print(
@@ -491,6 +497,44 @@ def doctor() -> None:
     for name, ok, note in checks:
         mark = "[green]✓[/]" if ok else "[yellow]○[/]"
         console.print(f"{mark} {name} [dim]{note}[/]")
+
+
+def _dir_size(path: Path) -> int:
+    if path.is_file():
+        return path.stat().st_size
+    total = 0
+    for p in path.rglob("*"):
+        try:
+            if p.is_file():
+                total += p.stat().st_size
+        except OSError:
+            pass
+    return total
+
+
+def _warn_low_disk(home: Path, source: Path, *, keep_snapshot: bool) -> None:
+    """Warn (and, on a TTY, confirm) before an ingest that might exhaust the disk."""
+    import shutil
+
+    try:
+        free = shutil.disk_usage(home if home.exists() else home.parent).free
+    except OSError:
+        return
+    src = _dir_size(source)
+    # blob store ≈ source size; snapshot adds ~another copy. Add a small buffer.
+    need = src * (2 if keep_snapshot else 1) + 50 * 1024 * 1024
+    if free >= need:
+        return
+    gb = 1024**3
+    err.print(
+        f"[yellow]⚠ Low disk:[/] this export is ~{src/gb:.1f} GB and needs about "
+        f"{need/gb:.1f} GB free, but only {free/gb:.1f} GB is available."
+    )
+    if keep_snapshot:
+        err.print("  Tip: re-run with [bold]--no-snapshot[/] to skip the second raw copy,")
+        err.print("  or free up disk space first. Your original export is never modified.")
+    if sys.stdin.isatty():
+        typer.confirm("Continue anyway?", abort=True)
 
 
 def _runtime(passphrase: str | None):

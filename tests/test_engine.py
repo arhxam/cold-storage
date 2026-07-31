@@ -76,6 +76,33 @@ def test_ingest_folder_scans_multiple_exports(layout, instagram_export, discord_
         assert arc.index.count("discord") > 0
 
 
+def test_no_snapshot_skips_raw_copy(layout, instagram_export):
+    with Archive(layout) as arc:
+        result = Engine(arc).ingest(instagram_export, keep_snapshot=False)
+        assert result.added > 0
+        assert result.snapshot is None
+        # no snapshots directory was created
+        assert not layout.snapshots_dir("instagram").exists()
+
+
+def test_ingest_never_modifies_the_source_export(layout, instagram_export):
+    import hashlib
+
+    def digest(root):
+        h = hashlib.sha256()
+        for p in sorted(root.rglob("*")):
+            if p.is_file():
+                h.update(p.relative_to(root).as_posix().encode())
+                h.update(p.read_bytes())
+        return h.hexdigest()
+
+    before = digest(instagram_export)
+    with Archive(layout) as arc:
+        Engine(arc).ingest(instagram_export)
+    after = digest(instagram_export)
+    assert before == after  # the user's original export is byte-for-byte untouched
+
+
 def test_ingest_folder_on_single_export(layout, instagram_export):
     with Archive(layout) as arc:
         results = Engine(arc).ingest_folder(instagram_export)

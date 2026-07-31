@@ -83,7 +83,7 @@ class Engine:
             error=error,
         )
 
-    def ingest_folder(self, folder: Path) -> list[IngestResult]:
+    def ingest_folder(self, folder: Path, *, keep_snapshot: bool = True) -> list[IngestResult]:
         """Scan a folder (e.g. ~/Downloads) and ingest every export it recognizes.
 
         This is the simplest possible trigger: drop your exports in one place and
@@ -100,7 +100,7 @@ class Engine:
             if not (child.is_dir() or child.suffix.lower() == ".zip"):
                 continue
             try:
-                results.append(self.ingest(child))
+                results.append(self.ingest(child, keep_snapshot=keep_snapshot))
             except (ValueError, FileNotFoundError):
                 continue  # not a recognizable export — skip quietly
         if results:
@@ -108,7 +108,7 @@ class Engine:
 
         # No child was a recognizable export → maybe the folder *itself* is one.
         try:
-            return [self.ingest(folder)]
+            return [self.ingest(folder, keep_snapshot=keep_snapshot)]
         except ValueError:
             return []
 
