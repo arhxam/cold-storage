@@ -57,6 +57,32 @@ def test_ingest_encrypted(layout, instagram_export):
                 assert arc.blobs.verify(sha)
 
 
+def test_ingest_folder_scans_multiple_exports(layout, instagram_export, discord_export, tmp_path):
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+    # move both exports + one junk folder into the "Downloads" dir
+    import shutil
+
+    shutil.copytree(instagram_export, downloads / "instagram-data")
+    shutil.copytree(discord_export, downloads / "discord-pkg")
+    (downloads / "unrelated").mkdir()
+    (downloads / "unrelated" / "notes.txt").write_text("nothing")
+
+    with Archive(layout) as arc:
+        results = Engine(arc).ingest_folder(downloads)
+        connectors = {r.connector for r in results}
+        assert {"instagram", "discord"} <= connectors
+        assert arc.index.count("instagram") > 0
+        assert arc.index.count("discord") > 0
+
+
+def test_ingest_folder_on_single_export(layout, instagram_export):
+    with Archive(layout) as arc:
+        results = Engine(arc).ingest_folder(instagram_export)
+        assert len(results) == 1
+        assert results[0].connector == "instagram"
+
+
 def test_unrecognized_export_raises(layout, tmp_path):
     junk = tmp_path / "junk"
     junk.mkdir()

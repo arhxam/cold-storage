@@ -189,6 +189,62 @@ class Index:
             sql += f" LIMIT {int(limit)}"
         return [dict(r) for r in self._conn.execute(sql).fetchall()]
 
+    def self_author(self, connector: str) -> str | None:
+        """Best guess at the account owner: the sender present in the most threads.
+
+        In every real export, "you" are the one participant who appears in all of
+        your own conversations — so the author spanning the most distinct threads
+        is almost certainly you. Used to right-align your own chat bubbles.
+        """
+        row = self._conn.execute(
+            """SELECT author, COUNT(DISTINCT thread) d FROM records
+               WHERE connector=? AND type='message' AND author IS NOT NULL
+               GROUP BY author ORDER BY d DESC, COUNT(*) DESC LIMIT 1""",
+            (connector,),
+        ).fetchone()
+        return row["author"] if row else None
+
+    def threads(self, connector: str) -> list[dict]:
+        """Conversation list for a connector: newest activity first."""
+        counts = self._conn.execute(
+            """SELECT thread, COUNT(*) c, MAX(created_at) last_at
+               FROM records
+               WHERE connector=? AND type='message' AND thread IS NOT NULL
+               GROUP BY thread ORDER BY last_at DESC""",
+            (connector,),
+        ).fetchall()
+        last = self._conn.execute(
+            """SELECT r.thread, r.text, r.author FROM records r
+               JOIN (SELECT thread, MAX(created_at) m FROM records
+                     WHERE connector=? AND type='message' GROUP BY thread) t
+               ON r.thread=t.thread AND r.created_at=t.m
+               WHERE r.connector=? AND r.type='message'""",
+            (connector, connector),
+        ).fetchall()
+        preview = {r["thread"]: (r["text"], r["author"]) for r in last}
+        out = []
+        for row in counts:
+            text, author = preview.get(row["thread"], (None, None))
+            out.append(
+                {
+                    "thread": row["thread"],
+                    "count": row["c"],
+                    "last_at": row["last_at"],
+                    "last_text": text,
+                    "last_author": author,
+                }
+            )
+        return out
+
+    def thread_messages(self, connector: str, thread: str, limit: int = 2000) -> list[dict]:
+        rows = self._conn.execute(
+            """SELECT * FROM records
+               WHERE connector=? AND type='message' AND thread=?
+               ORDER BY created_at LIMIT ?""",
+            (connector, thread, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     def records_for_type(self, connector: str, type_: RecordType, limit: int = 100) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM records WHERE connector=? AND type=? ORDER BY created_at LIMIT ?",

@@ -83,6 +83,35 @@ class Engine:
             error=error,
         )
 
+    def ingest_folder(self, folder: Path) -> list[IngestResult]:
+        """Scan a folder (e.g. ~/Downloads) and ingest every export it recognizes.
+
+        This is the simplest possible trigger: drop your exports in one place and
+        run this (manually or on a schedule). Unrecognized items are skipped
+        silently; already-ingested data is deduped, so it is safe to re-run.
+        """
+        folder = Path(folder)
+        if not folder.is_dir():
+            raise NotADirectoryError(folder)
+
+        # Scan children first: each subfolder or .zip may be a separate export.
+        results: list[IngestResult] = []
+        for child in sorted(folder.iterdir()):
+            if not (child.is_dir() or child.suffix.lower() == ".zip"):
+                continue
+            try:
+                results.append(self.ingest(child))
+            except (ValueError, FileNotFoundError):
+                continue  # not a recognizable export — skip quietly
+        if results:
+            return results
+
+        # No child was a recognizable export → maybe the folder *itself* is one.
+        try:
+            return [self.ingest(folder)]
+        except ValueError:
+            return []
+
     def _resolve_connector(self, path: Path, connector_id: str | None) -> Connector | None:
         if connector_id:
             return connectors.get(connector_id)

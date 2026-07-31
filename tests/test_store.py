@@ -40,6 +40,26 @@ def test_index_upsert_dedup_and_search(tmp_path):
     idx.close()
 
 
+def test_index_threads_and_self_author(tmp_path):
+    idx = Index(tmp_path / "index.sqlite")
+    msgs = [
+        NormalizedRecord(connector="ig", type=RecordType.MESSAGE, uid="a1", text="hi", author="me", thread="Maya", created_at="2024-01-01T10:00:00"),
+        NormalizedRecord(connector="ig", type=RecordType.MESSAGE, uid="a2", text="yo", author="Maya", thread="Maya", created_at="2024-01-01T10:05:00"),
+        NormalizedRecord(connector="ig", type=RecordType.MESSAGE, uid="b1", text="sup", author="me", thread="Sam", created_at="2024-01-02T09:00:00"),
+    ]
+    idx.upsert_many(msgs)
+    # "me" appears in both threads → detected as self
+    assert idx.self_author("ig") == "me"
+    threads = idx.threads("ig")
+    assert [t["thread"] for t in threads] == ["Sam", "Maya"]  # newest first
+    sam = next(t for t in threads if t["thread"] == "Sam")
+    assert sam["count"] == 1 and sam["last_text"] == "sup"
+    # messages come back in chronological order
+    maya_msgs = idx.thread_messages("ig", "Maya")
+    assert [m["text"] for m in maya_msgs] == ["hi", "yo"]
+    idx.close()
+
+
 def test_manifest_append_and_read(tmp_path):
     m = Manifest(tmp_path / "manifest.jsonl")
     rec = NormalizedRecord(connector="ig", type=RecordType.POST, uid="p1", text="hi")
