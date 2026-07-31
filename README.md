@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛟 Save Your Shit
+# Save Your Shit
 
 **A local-first backup for your own social-media data.**
 Instagram, Facebook, Discord, X — your chats, photos, followers, and posts,
@@ -12,26 +12,14 @@ The backup has to already exist.
 </div>
 
 <p align="center">
-<<<<<<< HEAD
-  <img src="docs/screenshots/chat.jpg" alt="Save Your Shit — chat view" width="850">
+  <img src="docs/screenshots/chat.jpg" alt="Save Your Shit — chat view" width="860">
 </p>
 <p align="center">
-  <img src="docs/screenshots/dashboard.jpg" alt="Dashboard" width="420">
-  <img src="docs/screenshots/conversations.jpg" alt="Conversation list" width="420">
+  <img src="docs/screenshots/dashboard.jpg" alt="Dashboard" width="860">
 </p>
 <p align="center"><em>The local web app (<code>syt serve</code>): your DMs as real
 conversations, a dashboard across every platform, and instant full-text search —
 all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
-=======
-  <img src="docs/screenshots/dashboard.jpg" alt="Save Your Shit dashboard" width="850">
-</p>
-<p align="center">
-  <img src="docs/screenshots/browse.jpg" alt="Browsing an Instagram archive" width="420">
-  <img src="docs/screenshots/search.jpg" alt="Searching your archive" width="420">
-</p>
-<p align="center"><em>The local web app (<code>syt serve</code>): a dashboard, per-platform
-browsing, and instant full-text search — all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
->>>>>>> origin/master
 
 ---
 
@@ -62,11 +50,12 @@ curl -LsSf https://raw.githubusercontent.com/arhxam/save-your-shit/master/instal
 Then:
 
 ```bash
-syt init                                   # pick a passphrase, save your Recovery Kit
-syt ingest ~/Downloads/instagram-export.zip   # auto-detects the platform
-syt serve                                  # open the dashboard + viewer in your browser
-syt status                                 # what's backed up and where it lives
-syt search "that thing we talked about"    # full-text search, offline
+syt init                                       # pick a passphrase, save your Recovery Kit
+syt check ~/Downloads/instagram-export.zip     # dry-run: confirm what it found (writes nothing)
+syt ingest ~/Downloads/instagram-export.zip    # auto-detects the platform
+syt serve                                      # open the app (dashboard + chats) in your browser
+syt status                                     # what's backed up and where it lives
+syt search "that thing we talked about"        # full-text search, offline
 ```
 
 Prefer to do it yourself? With [`uv`](https://docs.astral.sh/uv/) or `pipx`:
@@ -123,20 +112,18 @@ X ~7 days), so grab them promptly.
 
 Run `syt connectors` to see everything supported.
 
-<<<<<<< HEAD
 **The simplest habit:** drop your exports in one folder and let it sweep them up:
 
 ```bash
-syt ingest ~/Downloads --all     # ingests every export it recognizes; safe to re-run
-syt schedule --every daily       # (optional) do that automatically
+syt check ~/Downloads/instagram-export.zip   # dry-run: see exactly what it found first
+syt ingest ~/Downloads --all                 # ingests every export it recognizes; safe to re-run
+syt schedule --every daily                   # (optional) do that automatically
 ```
 
 That's the whole motion: download → it lands in a folder → a scheduled `ingest --all`
 picks it up → it shows up in the app. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for how every piece connects.
 
-=======
->>>>>>> origin/master
 ## Your data & your keys
 
 - **Encryption is on by default.** Your archive is encrypted with a key wrapped by
