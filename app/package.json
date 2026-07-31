@@ -20,7 +20,9 @@
     "productName": "Save Your Shit",
     "files": [
       "main.js",
-      "package.json"
+      "package.json",
+      "entitlements.mac.plist",
+      "assets/icon.icns"
     ],
     "extraResources": [
       {
@@ -38,8 +40,12 @@
           ]
         }
       ],
-      "identity": null,
-      "darkModeSupport": true
+      "darkModeSupport": true,
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "dmg": {
       "sign": false

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo/save-your-shit-mark-256.png" alt="Save Your Shit" width="128" height="128">
+
 # Save Your Shit
 
 **A local-first backup for your own social-media data.**
@@ -13,9 +15,9 @@ The backup has to already exist.
 
 <a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-0a0b0f?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac (Apple Silicon)"></a>
 
-*The Mac app is unsigned for now, so the first open is: right-click the app → Open
-(or run `xattr -d com.apple.quarantine "/Applications/Save Your Shit.app"` once).
-Prefer the terminal? The CLI install is below.*
+*Signed and notarized by Apple — just open the DMG and drag the app to
+Applications, no right-click or Terminal workaround needed. Prefer the terminal?
+The CLI install is below.*
 
 </div>
 

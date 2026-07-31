@@ -416,8 +416,10 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 900,
+    minHeight: 640,
     title: "Save Your Shit",
-    backgroundColor: "#0a0b0f",
+    backgroundColor: "#100f0d",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
