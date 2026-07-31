@@ -64,6 +64,21 @@ app.whenReady().then(async () => {
   if (opened) {
     await sleep(1600);
     await shoot(win, "chat");
+
+    // The media wall — photos decrypted straight out of the archive.
+    const hasMedia = await win.webContents.executeJavaScript(
+      `(() => {
+         const sp = (typeof SPECIALS !== 'undefined' ? SPECIALS : []).find(s => s.ty === '__media');
+         if (!sp) return false;
+         openSpecial(sp);
+         return true;
+       })()`,
+      true
+    );
+    if (hasMedia) {
+      await sleep(2600); // let the thumbnails decode
+      await shoot(win, "media");
+    }
   }
 
   win.destroy();

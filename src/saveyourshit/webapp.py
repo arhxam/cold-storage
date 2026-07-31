@@ -63,12 +63,92 @@ def api_thread(archive: Archive, connector: str, thread: str) -> list[dict]:
     return archive.index.thread_messages(connector, thread)
 
 
+#: Content types we will hand back for a stored blob. Anything not on this list
+#: is served as a download rather than rendered, so a hostile file inside an
+#: export can never be interpreted as HTML/SVG in the page's own origin.
+_MEDIA_TYPES = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "heic": "image/heic",
+    "mp4": "video/mp4",
+    "mov": "video/quicktime",
+    "webm": "video/webm",
+    "m4a": "audio/mp4",
+    "mp3": "audio/mpeg",
+    "opus": "audio/ogg",
+    "ogg": "audio/ogg",
+    "wav": "audio/wav",
+}
+
+
+def _sniff_media_type(data: bytes, hint: str | None) -> str:
+    """Type from the bytes themselves; the filename is only a tiebreaker.
+
+    Trusting a filename from inside someone's export would let a file called
+    ``x.png`` be served as whatever it claimed. Magic numbers cannot lie.
+    """
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data[4:8] == b"ftyp":
+        brand = data[8:12]
+        if brand[:3] == b"hei" or brand[:3] == b"mif":
+            return "image/heic"
+        if brand[:3] == b"qt ":
+            return "video/quicktime"
+        return "video/mp4"
+    if data[:4] == b"OggS":
+        return "audio/ogg"
+    if data[:3] == b"ID3" or data[:2] == b"\xff\xfb":
+        return "audio/mpeg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WAVE":
+        return "audio/wav"
+    if data[:4] == b"\x1aE\xdf\xa3":
+        return "video/webm"
+    ext = (hint or "").rsplit(".", 1)[-1].lower()
+    # Only honour the hint for types we would have sniffed anyway.
+    if ext in _MEDIA_TYPES and _MEDIA_TYPES[ext] in {
+        "image/heic",
+        "audio/mp4",
+        "video/quicktime",
+    }:
+        return _MEDIA_TYPES[ext]
+    return "application/octet-stream"
+
+
+def api_media(archive: Archive, sha: str, hint: str | None) -> tuple[int, str, bytes]:
+    """Serve one decrypted blob by content hash."""
+    # A sha256 hex digest and nothing else: this value indexes straight into the
+    # blob store, so anything that is not exactly a hash is refused rather than
+    # normalised.
+    if not sha or len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha.lower()):
+        return 400, "text/plain", b"bad blob id"
+    try:
+        data = archive.blobs.get_bytes(sha.lower())
+    except FileNotFoundError:
+        return 404, "text/plain", b"not found"
+    except Exception:
+        # Wrong key, corrupt blob — a broken thumbnail beats a broken page.
+        return 404, "text/plain", b"unavailable"
+    return 200, _sniff_media_type(data, hint), data
+
+
 def handle(
     path: str, qs: dict[str, list[str]], archive: Archive, config: Config
 ) -> tuple[int, str, bytes]:
     """Pure router: returns (status_code, content_type, body)."""
     if path in ("/", "/index.html"):
         return 200, "text/html; charset=utf-8", INDEX_HTML.encode("utf-8")
+    if path.startswith("/media/"):
+        return api_media(archive, path[len("/media/") :], (qs.get("n") or [None])[0])
     if path == "/favicon.ico":
         # Chromium requests this automatically when no external favicon is
         # declared. Keep the entirely-local UI quiet without adding another
@@ -111,8 +191,22 @@ def serve(
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
+            # Never let a file that came out of someone's export be interpreted
+            # as markup in this page's origin, and never let it be sniffed into
+            # something other than what we said it is.
+            self.send_header("X-Content-Type-Options", "nosniff")
+            if parsed.path.startswith("/media/"):
+                self.send_header("Content-Security-Policy", "sandbox; default-src 'none'")
+                self.send_header("Content-Disposition", "inline")
+                # Blobs are addressed by content hash, so they can never change.
+                self.send_header("Cache-Control", "private, max-age=31536000, immutable")
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                # The browser cancelled the request (scrolled away from an
+                # image, closed the tab). Not an error worth surfacing.
+                pass
 
     httpd = HTTPServer((host, port), Handler)
     url = f"http://{host}:{port}/"
@@ -442,6 +536,45 @@ INDEX_HTML = r"""<!doctype html>
   .listcard .ltx{ margin-top:4px; color:var(--text-2); font-size:12.5px; white-space:pre-wrap; word-break:break-word; }
 
   /* ------------------------------------------------------------------ */
+  /* Media — photos and video from the archive                           */
+  /* ------------------------------------------------------------------ */
+  .att{ display:grid; gap:4px; margin:2px 0 4px; grid-template-columns:1fr; }
+  .att.n2{ grid-template-columns:1fr 1fr; }
+  .att.n3,.att.n4{ grid-template-columns:1fr 1fr; }
+  .att img,.att video{ width:100%; height:100%; object-fit:cover; display:block;
+                       border-radius:10px; background:var(--panel-2); cursor:zoom-in; }
+  .att.one img,.att.one video{ max-height:320px; width:auto; max-width:100%; object-fit:contain;
+                               cursor:zoom-in; border-radius:10px; }
+  .att .cell{ position:relative; aspect-ratio:1; overflow:hidden; border-radius:10px; }
+  .att.one .cell{ aspect-ratio:auto; }
+  .att .more{ position:absolute; inset:0; background:rgba(0,0,0,.55); color:#fff;
+              display:grid; place-items:center; font-weight:650; font-size:15px; border-radius:10px; }
+  .msg .bubble .att{ margin-top:4px; min-width:180px; }
+  .att .broken{ display:grid; place-items:center; aspect-ratio:1; background:var(--panel-2);
+                border:1px solid var(--line); border-radius:10px; color:var(--text-3); }
+
+  .mgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .mgrid .cell{ position:relative; aspect-ratio:1; border-radius:var(--r-md); overflow:hidden;
+                background:var(--panel-2); border:1px solid var(--line); }
+  .mgrid img,.mgrid video{ width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in; }
+  .mgrid .vbadge{ position:absolute; right:7px; bottom:7px; background:rgba(0,0,0,.6); color:#fff;
+                  border-radius:5px; padding:1px 6px; font-size:10px; font-weight:600; }
+
+  /* Lightbox */
+  .lb{ position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.86);
+       display:grid; place-items:center; padding:48px; }
+  .lb img,.lb video{ max-width:100%; max-height:100%; border-radius:10px; display:block; }
+  .lb .x{ position:absolute; top:16px; right:18px; width:34px; height:34px; border-radius:50%;
+          background:rgba(255,255,255,.12); color:#fff; display:grid; place-items:center; }
+  .lb .x:hover{ background:rgba(255,255,255,.22); }
+  .lb .nav{ position:absolute; top:50%; transform:translateY(-50%); width:40px; height:40px;
+            border-radius:50%; background:rgba(255,255,255,.12); color:#fff; display:grid; place-items:center; }
+  .lb .nav:hover{ background:rgba(255,255,255,.22); }
+  .lb .nav.prev{ left:18px; } .lb .nav.next{ right:18px; }
+  .lb .cap{ position:absolute; bottom:16px; left:0; right:0; text-align:center; color:#d4d4d8;
+            font-size:12px; font-variant-numeric:tabular-nums; }
+
+  /* ------------------------------------------------------------------ */
   /* Empty, loading & skeleton states                                    */
   /* ------------------------------------------------------------------ */
   .empty{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
@@ -537,6 +670,8 @@ const PATHS={
   alert:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
   plug:'<path d="M6.3 20.7a2.4 2.4 0 0 1 0-3.4l3-3a2.4 2.4 0 0 1 3.4 0l1 1a2.4 2.4 0 0 1 0 3.4l-3 3a2.4 2.4 0 0 1-3.4 0z"/><path d="m14 8 2-2"/><path d="M17.7 3.3a2.4 2.4 0 0 1 3.4 3.4l-3 3a2.4 2.4 0 0 1-3.4 0l-1-1a2.4 2.4 0 0 1 0-3.4z"/><path d="m8 14-2 2"/>',
   cloud:'<path d="M12 13v8"/><path d="m8 17 4 4 4-4"/><path d="M20.9 18.4A5 5 0 0 0 18 9h-1.3A8 8 0 1 0 4 16.2"/>',
+  chevL:'<path d="m15 18-6-6 6-6"/>',
+  chevR:'<path d="m9 18 6-6-6-6"/>',
   cog:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H7a1.7 1.7 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V7a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
 };
 /* ---------- tiny helpers ---------- */
@@ -579,6 +714,89 @@ function fmtCompact(n){if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M
   if(n>=1e4)return Math.round(n/1e3)+'k';if(n>=1e3)return (n/1e3).toFixed(1).replace(/\.0$/,'')+'k';
   return String(n);}
 function emptyState(icon,title,html){return `<div class="empty"><span class="eicon">${ic(icon,20,1.8)}</span><h3>${title}</h3><p>${html}</p></div>`;}
+
+/* ---------- media ---------- */
+/* Records carry `media` as a JSON array of sha256 content hashes; each is
+   served decrypted from /media/<sha>. Video is detected on load rather than by
+   filename, since the archive stores hashes and not names. */
+const VIDEO_RE=/\.(mp4|mov|webm|m4v)$/i;
+function mediaList(rec){
+  const raw=rec&&rec.media; if(!raw) return [];
+  let arr=raw;
+  if(typeof raw==='string'){ try{ arr=JSON.parse(raw); }catch(e){ return []; } }
+  if(!Array.isArray(arr)) return [];
+  return arr.filter(s=>typeof s==='string'&&/^[0-9a-f]{64}$/i.test(s));
+}
+function mediaUrl(sha){ return '/media/'+encodeURIComponent(sha); }
+/* Everything currently open in the lightbox, so arrow keys can page through. */
+let LB=[], LBI=0;
+function mediaCell(sha,cls){
+  return `<span class="cell"><img loading="lazy" decoding="async" src="${escA(mediaUrl(sha))}" alt=""`
+    +` data-lb="${escA(sha)}"${cls?` class="${escA(cls)}"`:''}></span>`;
+}
+/* A blob that won't decode (wrong key, truncated) becomes a placeholder rather
+   than a browser's broken-image glyph. Delegated in the capture phase because
+   'error' does not bubble. */
+document.addEventListener('error',(e)=>{
+  const img=e.target;
+  if(!(img instanceof HTMLImageElement)||!img.dataset.lb) return;
+  const cell=img.closest('.cell'); if(!cell) return;
+  cell.innerHTML=`<span class="broken">${ic('image',18,1.7)}</span>`;
+},true);
+/* Attachments under a chat bubble: up to 4 tiles, the last one counting the rest. */
+function attachments(shas){
+  if(!shas.length) return '';
+  const shown=shas.slice(0,4), extra=shas.length-shown.length;
+  const cls=shown.length===1?'att one':'att n'+shown.length;
+  return `<span class="${cls}" data-group="${escA(shas.join(','))}">`
+    +shown.map((s,i)=>{
+      const cell=mediaCell(s);
+      if(i===3&&extra>0) return cell.replace('</span>',`<span class="more">+${extra}</span></span>`);
+      return cell;
+    }).join('')+`</span>`;
+}
+function openLightbox(group,sha){
+  LB=group.filter(Boolean); LBI=Math.max(0,LB.indexOf(sha));
+  let el=document.getElementById('lightbox');
+  if(!el){
+    el=document.createElement('div'); el.className='lb'; el.id='lightbox';
+    el.addEventListener('click',(e)=>{ if(e.target===el||e.target.closest('.x')) closeLightbox(); });
+    document.body.appendChild(el);
+    document.addEventListener('keydown',lbKeys);
+  }
+  renderLightbox();
+}
+function renderLightbox(){
+  const el=document.getElementById('lightbox'); if(!el) return;
+  const sha=LB[LBI]; if(!sha) return closeLightbox();
+  const many=LB.length>1;
+  el.innerHTML=`<button class="x" aria-label="Close">${ic('plus',18,2.2)}</button>`
+    +(many?`<button class="nav prev" aria-label="Previous">${ic('chevL',20,2.2)}</button>`:'')
+    +`<img src="${escA(mediaUrl(sha))}" alt="">`
+    +(many?`<button class="nav next" aria-label="Next">${ic('chevR',20,2.2)}</button>`:'')
+    +(many?`<div class="cap">${LBI+1} of ${LB.length}</div>`:'');
+  el.querySelector('.x').style.transform='rotate(45deg)'; /* reuse the + glyph as a close X */
+  const p=el.querySelector('.prev'), n=el.querySelector('.next');
+  if(p) p.addEventListener('click',(e)=>{ e.stopPropagation(); step(-1); });
+  if(n) n.addEventListener('click',(e)=>{ e.stopPropagation(); step(1); });
+}
+function step(d){ if(!LB.length) return; LBI=(LBI+d+LB.length)%LB.length; renderLightbox(); }
+function closeLightbox(){
+  const el=document.getElementById('lightbox'); if(el) el.remove();
+  document.removeEventListener('keydown',lbKeys); LB=[]; LBI=0;
+}
+function lbKeys(e){
+  if(e.key==='Escape') closeLightbox();
+  else if(e.key==='ArrowRight') step(1);
+  else if(e.key==='ArrowLeft') step(-1);
+}
+/* One delegated listener for the whole page — survives every re-render. */
+document.addEventListener('click',(e)=>{
+  const img=e.target.closest('[data-lb]'); if(!img) return;
+  const holder=img.closest('[data-group]');
+  const group=holder?(holder.dataset.group||'').split(',').filter(Boolean):[img.dataset.lb];
+  openLightbox(group,img.dataset.lb);
+});
 function skRows(n){let h='';for(let i=0;i<n;i++)h+=`<div class="sk-row"><div class="sk sk-av"></div><div class="sk-mid"><div class="sk sk-l1" style="width:${45+((i*13)%30)}%"></div><div class="sk sk-l2" style="width:${65+((i*17)%25)}%"></div></div></div>`;return h;}
 function skMsgs(){let h='';const w=[46,58,34,52,40,62];for(let i=0;i<6;i++)h+=`<div class="sk sk-bubble ${i%3===2?'r':''}" style="width:${w[i]}%"></div>`;return h;}
 
@@ -926,9 +1144,14 @@ async function openConnector(id){
   for(const [ty,label,icn] of [['follower','Followers','users'],['following','Following','users'],['post','Posts','doc'],['saved','Saved','bookmark']]){
     if(tc[ty]) SPECIALS.push({ty,label,icn,count:tc[ty]});
   }
+  // Photos and video live across records rather than as their own type, so
+  // "Media" is a view over everything with attachments.
+  SPECIALS.push({ty:'__media',label:'Photos & video',icn:'image',count:null});
   const parts=[];
   if(THREADS.length) parts.push(THREADS.length.toLocaleString()+(THREADS.length===1?' conversation':' conversations'));
-  for(const sp of SPECIALS) parts.push(sp.count.toLocaleString()+' '+sp.label.toLowerCase());
+  // Media has no count of its own (it spans every record type), so it simply
+  // doesn't appear in the header tally.
+  for(const sp of SPECIALS) if(sp.count!=null) parts.push(sp.count.toLocaleString()+' '+sp.label.toLowerCase());
   const hs=document.getElementById('hsub');
   hs.textContent=parts.join(' · '); hs.title=parts.join(' · ');
   document.getElementById('q').addEventListener('input',filterThreads);
@@ -951,7 +1174,7 @@ function renderThreadRows(threads){
       h+=`<button class="row ${activeSpecial===sp.ty?'active':''}" data-kind="special" data-i="${i}">
         <span class="av sq">${ic(sp.icn,15,1.8)}</span>
         <span class="mid"><span class="t"><span class="nm">${sp.label}</span></span>
-        <span class="pv">${sp.count.toLocaleString()} items</span></span></button>`;
+        <span class="pv">${sp.count==null?'from your chats and posts':sp.count.toLocaleString()+' items'}</span></span></button>`;
     });
   }
   if(threads.length){
@@ -961,7 +1184,7 @@ function renderThreadRows(threads){
       h+=`<button class="row ${activeThread===t.thread?'active':''}" data-kind="thread" data-i="${i}">
         <span class="av" style="background:${avColor(t.thread)}">${initial(t.thread)}</span>
         <span class="mid"><span class="t"><span class="nm">${esc(t.thread)}</span><span class="tm">${fmtShort(t.last_at)}</span></span>
-        <span class="pv">${yours?'<b>You:</b> ':''}${esc((t.last_text||'').slice(0,80))}</span></span></button>`;
+        <span class="pv">${yours?'<b>You:</b> ':''}${t.last_text?esc(t.last_text.slice(0,80)):'<i style="opacity:.75">Photo</i>'}</span></span></button>`;
     });
   }else if(THREADS.length){
     h+=emptyState('search','No results','No conversations match "'+esc(curQuery())+'".');
@@ -994,10 +1217,13 @@ async function openThread(thread){
     if(k&&k!==day){ day=k; prev=null; body+=`<div class="daysep"><span>${dayLabel(k)}</span></div>`; }
     const me=!!(m.author&&m.author===SELF);
     const cont=prev!==null&&prev===m.author;
+    const att=mediaList(m);
     body+=`<div class="msg${me?' me':''}${cont?' cont':''}">`
       +((me||cont)?'':`<span class="mav" style="background:${avColor(m.author)}">${initial(m.author)}</span>`)
       +`<div class="bubble">${(me||cont)?'':`<div class="who" style="color:${avColor(m.author)}">${esc(m.author)}</div>`}`
-      +`<div class="tx">${esc(m.text)}</div><div class="tm">${fmtTime(m.created_at)}</div></div></div>`;
+      +(att.length?attachments(att):'')
+      +(m.text?`<div class="tx">${esc(m.text)}</div>`:'')
+      +`<div class="tm">${fmtTime(m.created_at)}</div></div></div>`;
     prev=m.author;
   }
   pane.innerHTML=`
@@ -1012,20 +1238,40 @@ async function openThread(thread){
 async function openSpecial(sp){
   activeThread=null; activeSpecial=sp.ty; renderThreadRows(THREADS.filter(matchFilter));
   const pane=document.getElementById('pane');
+  const isMedia=sp.ty==='__media';
   pane.innerHTML=`<div class="dash"><div class="dashin">
     <header class="dhead"><h1>${sp.label}</h1><div class="dsub"><span>&nbsp;</span></div></header>
-    <div class="fgrid">${'<div class="sk" style="height:56px;border-radius:11px"></div>'.repeat(9)}</div></div></div>`;
+    <div class="${isMedia?'mgrid':'fgrid'}">${'<div class="sk" style="height:'+(isMedia?'150px':'56px')+';border-radius:11px"></div>'.repeat(9)}</div></div></div>`;
   let rows;
-  try{ rows=await (await fetch(`/api/records?connector=${encodeURIComponent(active)}&type=${encodeURIComponent(sp.ty)}&limit=1000`)).json(); }
+  const url=isMedia
+    ? `/api/records?connector=${encodeURIComponent(active)}&limit=4000`
+    : `/api/records?connector=${encodeURIComponent(active)}&type=${encodeURIComponent(sp.ty)}&limit=1000`;
+  try{ rows=await (await fetch(url)).json(); }
   catch(e){ if(activeSpecial===sp.ty) pane.innerHTML=emptyState('box','Could not load '+sp.label.toLowerCase(),'The local server did not respond.'); return; }
   if(activeSpecial!==sp.ty) return;
+
+  if(isMedia){
+    // One flat, chronological wall of everything with an attachment.
+    const seen=new Set(), all=[];
+    for(const r of rows) for(const s of mediaList(r)) if(!seen.has(s)){ seen.add(s); all.push(s); }
+    const cells=all.map(s=>`<div class="cell">${mediaCell(s).replace(/^<span class="cell">|<\/span>$/g,'')}</div>`).join('');
+    pane.innerHTML=`<div class="dash"><div class="dashin">
+      <header class="dhead"><h1>Photos &amp; video</h1>
+      <div class="dsub"><span>${all.length.toLocaleString()} file${all.length===1?'':'s'} archived from ${esc(active)} · click any to open</span></div></header>
+      ${all.length?`<div class="mgrid" data-group="${escA(all.join(','))}">${cells}</div>`
+        :emptyState('image','No photos yet','No photos or video were attached in this export.')}</div></div>`;
+    return;
+  }
+
   const grid=sp.ty==='follower'||sp.ty==='following';
   const items=rows.map(r=>{
     const name=r.author||r.text||'';
     const when=r.created_at?dayLabel(dayKey(r.created_at)):'';
     if(grid) return `<div class="fcard"><span class="av" style="background:${avColor(name)}">${initial(name)}</span>
       <span class="fmid"><span class="fnm">${esc(name)}</span><span class="fdt">${when}</span></span></div>`;
+    const att=mediaList(r);
     return `<div class="listcard"><div class="lhd"><span class="who">${esc(name)}</span><span class="fdt">${when}</span></div>
+      ${att.length?`<div style="margin-top:8px;max-width:420px">${attachments(att)}</div>`:''}
       ${r.text&&r.text!==name?`<div class="ltx">${esc(r.text)}</div>`:''}</div>`;
   }).join('');
   pane.innerHTML=`<div class="dash"><div class="dashin">

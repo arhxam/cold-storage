@@ -153,9 +153,12 @@ def test_platform_marks_are_real_logos_not_letters():
         "slack",
     ):
         assert f"{platform}:{{" in INDEX_HTML.replace(" ", ""), f"no logo for {platform}"
-    # Drawn inline as SVG — never fetched from a CDN.
+    # Drawn inline as SVG — never fetched from a CDN. The only <img> in the UI
+    # is the user's own archived media, served from the loopback /media/ route.
     assert 'viewBox="0 0 24 24"' in INDEX_HTML
-    assert "<img" not in INDEX_HTML
+    assert "src='http" not in INDEX_HTML
+    assert 'src="http' not in INDEX_HTML
+    assert "mediaUrl(" in INDEX_HTML, "images must go through the /media/ helper"
 
 
 def test_shadcn_zinc_tokens():
