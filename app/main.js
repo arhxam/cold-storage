@@ -54,6 +54,17 @@ function sytHome() {
   return process.env.SYT_HOME || path.join(os.homedir(), "SaveYourShit");
 }
 
+/** Where the Recovery Kit goes: visible to the user, outside what gets synced. */
+function recoveryKitDir() {
+  const desktop = path.join(os.homedir(), "Desktop");
+  try {
+    if (fs.existsSync(desktop)) return desktop;
+  } catch {
+    /* fall through */
+  }
+  return os.homedir();
+}
+
 function childEnv() {
   // Inherit the user's env; never set SYT_NO_KEYRING — the Keychain cache is
   // what makes later launches passwordless.
@@ -305,7 +316,11 @@ function ensureInitialized() {
   if (res.ok) {
     // Persist the Recovery Kit next to the data (and surface it once).
     const codeMatch = res.stdout.match(/([A-Z2-7]{4}(?:-[A-Z2-7]{4}){5,})/);
-    const kitPath = path.join(home, "RECOVERY-KIT.txt");
+    // Deliberately NOT inside the archive folder. That folder is what cloud
+    // sync uploads, and this file holds the master key in the clear — putting
+    // it there would hand the key to anyone who reached the backup. It also
+    // belongs somewhere the user will actually see it.
+    const kitPath = path.join(recoveryKitDir(), "Save Your Shit — Recovery Kit.txt");
     const body = [
       "Save Your Shit — Recovery Kit",
       "=============================",
@@ -940,19 +955,31 @@ function showErrorLog() {
 }
 
 function showRecoveryKit() {
-  const kit = path.join(sytHome(), "RECOVERY-KIT.txt");
-  if (fs.existsSync(kit)) {
-    shell.openPath(kit);
+  // Older builds wrote it into the archive folder; check both so an existing
+  // install still finds its kit.
+  const candidates = [
+    path.join(recoveryKitDir(), "Save Your Shit — Recovery Kit.txt"),
+    path.join(sytHome(), "RECOVERY-KIT.txt"),
+  ];
+  for (const kit of candidates) {
+    if (fs.existsSync(kit)) {
+      shell.showItemInFolder(kit);
+      return;
+    }
+  }
+  const msg = {
+    type: "info",
+    title: "Recovery Kit",
+    message: "No Recovery Kit file found.",
+    detail:
+      `Expected at:\n${candidates[0]}\n\nIf you set this archive up with the ` +
+      "`syt` command line, the recovery code was shown once during `syt init`.",
+    buttons: ["OK"],
+  };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    dialog.showMessageBox(mainWindow, msg).catch(() => {});
   } else {
-    dialog.showMessageBox(mainWindow, {
-      type: "info",
-      title: "Recovery Kit",
-      message: "No Recovery Kit file found.",
-      detail:
-        `Expected at:\n${kit}\n\nIf you set up with the CLI, your ` +
-        "recovery code was shown during `syt init`.",
-      buttons: ["OK"],
-    });
+    dialog.showMessageBox(msg).catch(() => {});
   }
 }
 

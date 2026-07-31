@@ -57,7 +57,18 @@ class TwitterConnector(Connector):
         yield from self._parse_follows(root, "following.js", "following", RecordType.FOLLOWING)
 
     def _find(self, root: Path, name: str) -> list[Path]:
-        return list(root.glob(f"**/data/{name}")) or list(root.glob(f"**/{name}"))
+        """Locate an export file, including its multi-part siblings.
+
+        X splits large archives: ``tweets.js`` is joined by ``tweets-part1.js``,
+        ``tweets-part2.js`` and so on. Matching the exact name meant everything
+        after the first part was silently missing from the backup.
+        """
+        stem, _, ext = name.rpartition(".")
+        pattern = f"{stem}*.{ext}" if stem else name
+        found = sorted(set(root.glob(f"**/data/{pattern}"))) or sorted(
+            set(root.glob(f"**/{pattern}"))
+        )
+        return found
 
     def _parse_tweets(self, root: Path) -> Iterator[Batch]:
         for f in self._find(root, "tweets.js") + self._find(root, "tweet.js"):

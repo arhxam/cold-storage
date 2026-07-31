@@ -63,7 +63,16 @@ class Engine:
                     + ", ".join(c.id for c in connectors.all_connectors())
                 )
 
-            snapshot = self._snapshot(source, unpacked, connector.id) if keep_snapshot else None
+            # Keeping a raw copy is a nice-to-have; failing to make one must not
+            # cost the user the actual backup. A dangling symlink inside an
+            # export used to abort here, before a single record was stored.
+            snapshot = None
+            snapshot_error: str | None = None
+            if keep_snapshot:
+                try:
+                    snapshot = self._snapshot(source, unpacked, connector.id)
+                except Exception as exc:
+                    snapshot_error = f"raw copy skipped ({type(exc).__name__}: {exc})"
 
             added = 0
             batches = 0
@@ -90,6 +99,8 @@ class Engine:
                     errors.append(f"{type(exc).__name__}: {exc}")
             if errors:
                 status = "error"
+            if snapshot_error:
+                errors.append(snapshot_error)  # reported, but not a failed import
             # Keep every distinct reason, but bound what we store.
             error = "; ".join(dict.fromkeys(errors))[:2000] or None
 
@@ -122,7 +133,10 @@ class Engine:
                 continue
             try:
                 results.append(self.ingest(child, keep_snapshot=keep_snapshot))
-            except (ValueError, FileNotFoundError):
+            except Exception:
+                # A password-protected zip, a dangling symlink, an unreadable
+                # file — one bad item in ~/Downloads must not stop the sweep
+                # before it reaches the real exports.
                 continue  # not a recognizable export — skip quietly
         if results:
             return results
@@ -145,9 +159,15 @@ class Engine:
         if original.is_file():
             shutil.copy2(original, dest / original.name)
         else:
-            target = dest / "export"
+            # Name the copy after the export, so two folders ingested on the
+            # same day don't silently overwrite (or skip) one another.
+            target = dest / (_safe_dirname(original.name) or "export")
             if not target.exists():
-                shutil.copytree(unpacked, target)
+                # Real exports contain symlinks, some of them dangling; copy the
+                # link itself rather than chasing it into an error.
+                shutil.copytree(
+                    unpacked, target, symlinks=True, ignore_dangling_symlinks=True
+                )
         return dest
 
 

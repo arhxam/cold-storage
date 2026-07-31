@@ -117,6 +117,27 @@ class Index:
         )
         return True
 
+    def attach_media(self, global_uid: str, shas: list[str]) -> bool:
+        """Add media hashes to a record that already exists. Returns True if changed."""
+        import json
+
+        row = self._conn.execute(
+            "SELECT media FROM records WHERE global_uid=?", (global_uid,)
+        ).fetchone()
+        if row is None:
+            return False
+        try:
+            current = json.loads(row["media"] or "[]")
+        except (TypeError, ValueError):
+            current = []
+        merged = list(dict.fromkeys([*current, *shas]))
+        if merged == current:
+            return False
+        self._conn.execute(
+            "UPDATE records SET media=? WHERE global_uid=?", (json.dumps(merged), global_uid)
+        )
+        return True
+
     def upsert_many(self, records: list[NormalizedRecord]) -> int:
         added = 0
         for r in records:

@@ -110,6 +110,12 @@ class ResticRepo:
     ) -> RunResult:
         """Back up ``paths`` as a new snapshot (``restic backup``), optionally tagged."""
         args: list[str] = ["backup"]
+        # Never upload a Recovery Kit. It holds the master key in the clear, so
+        # shipping it alongside the ciphertext would undo the encryption for
+        # anyone who reached the remote. Older versions wrote one into the
+        # archive folder, so exclude it defensively rather than assuming.
+        for pattern in ("RECOVERY-KIT.txt", "*RECOVERY*KIT*", "*.recovery-kit"):
+            args += ["--exclude", pattern]
         for tag in tags or ():
             args += ["--tag", tag]
         args += [str(p) for p in paths]

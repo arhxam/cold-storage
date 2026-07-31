@@ -80,25 +80,36 @@ class TestResticArgv:
 
     def test_snapshot_single_path(self, repo, runner):
         repo.snapshot(["/home/me/SaveYourShit"], "pw")
-        assert runner.last_argv == [
-            "restic", "--repo", "/backups/syt-repo", "backup", "/home/me/SaveYourShit",
-        ]
+        assert runner.last_argv[:4] == ["restic", "--repo", "/backups/syt-repo", "backup"]
+        assert runner.last_argv[-1] == "/home/me/SaveYourShit"
         assert runner.last_env == {"RESTIC_PASSWORD": "pw"}
+
+    def test_snapshot_never_uploads_a_recovery_kit(self, repo, runner):
+        """The kit holds the master key in the clear.
+
+        Uploading it next to the ciphertext would hand the key to anyone who
+        reached the remote, so it is excluded no matter what is being backed up.
+        """
+        repo.snapshot(["/home/me/SaveYourShit"], "pw")
+        argv = runner.last_argv
+        excluded = {argv[i + 1] for i, a in enumerate(argv) if a == "--exclude"}
+        assert "RECOVERY-KIT.txt" in excluded
+        assert any("RECOVERY" in e.upper() for e in excluded)
 
     def test_snapshot_multiple_paths_accepts_pathlib(self, repo, runner):
         repo.snapshot([Path("/data/a"), "/data/b"], "pw")
         # Path inputs are stringified to native separators (native paths are what
         # restic wants on Windows), so compare against str(Path(...)) for OS-agnosticism.
-        assert runner.last_argv == [
-            "restic", "--repo", "/backups/syt-repo", "backup", str(Path("/data/a")), "/data/b",
-        ]
+        assert runner.last_argv[:4] == ["restic", "--repo", "/backups/syt-repo", "backup"]
+        assert runner.last_argv[-2:] == [str(Path("/data/a")), "/data/b"]
 
     def test_snapshot_with_tags(self, repo, runner):
         repo.snapshot(["/data"], "pw", tags=["syt", "nightly"])
-        assert runner.last_argv == [
-            "restic", "--repo", "/backups/syt-repo", "backup",
-            "--tag", "syt", "--tag", "nightly", "/data",
-        ]
+        argv = runner.last_argv
+        assert argv[:4] == ["restic", "--repo", "/backups/syt-repo", "backup"]
+        assert argv[-1] == "/data"
+        tags = [argv[i + 1] for i, a in enumerate(argv) if a == "--tag"]
+        assert tags == ["syt", "nightly"]
 
     def test_snapshot_no_tags_adds_no_tag_flags(self, repo, runner):
         repo.snapshot(["/data"], "pw", tags=None)
