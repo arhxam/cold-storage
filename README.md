@@ -12,6 +12,7 @@ The backup has to already exist.
 </div>
 
 <p align="center">
+<<<<<<< HEAD
   <img src="docs/screenshots/chat.jpg" alt="Save Your Shit — chat view" width="850">
 </p>
 <p align="center">
@@ -21,6 +22,16 @@ The backup has to already exist.
 <p align="center"><em>The local web app (<code>syt serve</code>): your DMs as real
 conversations, a dashboard across every platform, and instant full-text search —
 all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
+=======
+  <img src="docs/screenshots/dashboard.jpg" alt="Save Your Shit dashboard" width="850">
+</p>
+<p align="center">
+  <img src="docs/screenshots/browse.jpg" alt="Browsing an Instagram archive" width="420">
+  <img src="docs/screenshots/search.jpg" alt="Searching your archive" width="420">
+</p>
+<p align="center"><em>The local web app (<code>syt serve</code>): a dashboard, per-platform
+browsing, and instant full-text search — all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
+>>>>>>> origin/master
 
 ---
 
@@ -112,6 +123,7 @@ X ~7 days), so grab them promptly.
 
 Run `syt connectors` to see everything supported.
 
+<<<<<<< HEAD
 **The simplest habit:** drop your exports in one folder and let it sweep them up:
 
 ```bash
@@ -123,6 +135,8 @@ That's the whole motion: download → it lands in a folder → a scheduled `inge
 picks it up → it shows up in the app. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for how every piece connects.
 
+=======
+>>>>>>> origin/master
 ## Your data & your keys
 
 - **Encryption is on by default.** Your archive is encrypted with a key wrapped by
