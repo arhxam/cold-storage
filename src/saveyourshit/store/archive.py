@@ -67,6 +67,13 @@ class Archive:
             if self.index.upsert(r):
                 added_records.append(r)
                 by_connector.setdefault(r.connector, []).append(r)
+            elif r.media:
+                # The record already existed, but this pass resolved media for
+                # it — typically because the first ingest ran before the photo
+                # files were present. Without this the blobs sit on disk
+                # encrypted and unreachable forever, since nothing else records
+                # which record they belong to.
+                self.index.attach_media(r.global_uid, r.media)
         self.index._conn.commit()  # noqa: SLF001 — batch commit
         for connector, records in by_connector.items():
             self.manifest(connector).append_many(records)

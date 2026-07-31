@@ -17,6 +17,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from ..models import NormalizedRecord, RecordType
+from ..textutil import sqlite_safe
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS records (
@@ -107,12 +108,33 @@ class Index:
                 record.type.value,
                 record.uid,
                 record.created_at,
-                record.author,
-                record.thread,
-                record.text,
+                sqlite_safe(record.author),
+                sqlite_safe(record.thread),
+                sqlite_safe(record.text),
                 json.dumps(d["media"]),
-                json.dumps(d["extra"]),
+                json.dumps(d["extra"], ensure_ascii=True),
             ),
+        )
+        return True
+
+    def attach_media(self, global_uid: str, shas: list[str]) -> bool:
+        """Add media hashes to a record that already exists. Returns True if changed."""
+        import json
+
+        row = self._conn.execute(
+            "SELECT media FROM records WHERE global_uid=?", (global_uid,)
+        ).fetchone()
+        if row is None:
+            return False
+        try:
+            current = json.loads(row["media"] or "[]")
+        except (TypeError, ValueError):
+            current = []
+        merged = list(dict.fromkeys([*current, *shas]))
+        if merged == current:
+            return False
+        self._conn.execute(
+            "UPDATE records SET media=? WHERE global_uid=?", (json.dumps(merged), global_uid)
         )
         return True
 
@@ -163,24 +185,67 @@ class Index:
         return {r["type"]: r["c"] for r in rows}
 
     def search(self, query: str, *, connector: str | None = None, limit: int = 50) -> list[dict]:
+        """Full-text search.
+
+        People type what they remember — "why?", "AT&T", a half-typed quote —
+        and FTS5 reads most punctuation as query syntax. Anything unquoted
+        raised OperationalError straight out of the CLI and the web handler, so
+        the query is passed as quoted phrase tokens instead: punctuation is
+        searched for literally rather than parsed.
+        """
+        match = _fts_phrase(query)
+        if not match:
+            return []
         sql = (
             "SELECT r.* FROM records_fts f JOIN records r ON r.rowid=f.rowid "
             "WHERE records_fts MATCH ?"
         )
-        params: list = [query]
+        params: list = [match]
         if connector:
             sql += " AND r.connector=?"
             params.append(connector)
         sql += " ORDER BY rank LIMIT ?"
         params.append(limit)
-        with closing(self._conn.execute(sql, params)) as cur:
-            return [dict(row) for row in cur.fetchall()]
+        try:
+            with closing(self._conn.execute(sql, params)) as cur:
+                return [dict(row) for row in cur.fetchall()]
+        except sqlite3.OperationalError:
+            # Anything the tokenizer still refuses is "no matches", never a crash.
+            return []
 
     def last_run(self, connector: str) -> dict | None:
         row = self._conn.execute(
             "SELECT * FROM runs WHERE connector=? ORDER BY id DESC LIMIT 1", (connector,)
         ).fetchone()
         return dict(row) if row else None
+
+    def records_page(
+        self,
+        *,
+        connector: str | None = None,
+        type_: str | None = None,
+        limit: int = 300,
+    ) -> list[dict]:
+        """Records for one collection, filtered in SQL.
+
+        This used to read a global slice and filter it in Python, so once an
+        alphabetically-earlier connector had more rows than the slice, every
+        later connector's collections came back empty — the sidebar said
+        "Followers · 123" and the page said "Nothing here".
+        """
+        where, params = [], []
+        if connector:
+            where.append("connector=?")
+            params.append(connector)
+        if type_:
+            where.append("type=?")
+            params.append(type_)
+        sql = "SELECT connector, type, uid, created_at, author, thread, text, media FROM records"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY created_at DESC, thread LIMIT ?"
+        params.append(int(limit))
+        return [dict(r) for r in self._conn.execute(sql, params).fetchall()]
 
     def iter_records(self, *, limit: int | None = None) -> list[dict]:
         """Return all records (optionally capped), oldest-ish first, for the viewer."""
@@ -240,13 +305,26 @@ class Index:
         return out
 
     def thread_messages(self, connector: str, thread: str, limit: int = 2000) -> list[dict]:
+        """The most recent ``limit`` messages, in reading order.
+
+        Taking the *first* N meant a long conversation stopped years ago: the
+        list preview showed the real latest message and the transcript below it
+        ended somewhere else entirely.
+        """
         rows = self._conn.execute(
             """SELECT * FROM records
                WHERE connector=? AND type='message' AND thread=?
-               ORDER BY created_at LIMIT ?""",
+               ORDER BY created_at DESC LIMIT ?""",
             (connector, thread, limit),
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [dict(r) for r in reversed(rows)]
+
+    def thread_message_count(self, connector: str, thread: str) -> int:
+        row = self._conn.execute(
+            "SELECT COUNT(*) c FROM records WHERE connector=? AND type='message' AND thread=?",
+            (connector, thread),
+        ).fetchone()
+        return row["c"] if row else 0
 
     def records_for_type(self, connector: str, type_: RecordType, limit: int = 100) -> list[dict]:
         rows = self._conn.execute(
@@ -254,3 +332,21 @@ class Index:
             (connector, type_.value, limit),
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def _fts_phrase(query: str) -> str:
+    """Turn a human query into a safe FTS5 MATCH expression.
+
+    Each whitespace-separated word becomes a quoted phrase, so `?`, `:`, `-`,
+    `*`, `NEAR(` and unbalanced quotes are matched as text instead of being
+    interpreted. Words are ANDed, which is what people expect from a search box.
+    """
+    words = [w for w in (query or "").split() if w.strip()]
+    quoted = []
+    for w in words:
+        # Keep only characters the tokenizer can index; a token that reduces to
+        # nothing (e.g. "!!!") is dropped rather than producing invalid syntax.
+        cleaned = "".join(c if c.isalnum() or c in "_'" else " " for c in w).strip()
+        for part in cleaned.split():
+            quoted.append('"' + part.replace('"', '""') + '"')
+    return " ".join(quoted)

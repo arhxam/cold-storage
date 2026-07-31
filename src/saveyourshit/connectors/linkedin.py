@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from ..models import Batch, NormalizedRecord, RecordType
-from .base import Connector, register
+from .base import Connector, register, stable_uid
 
 _MESSAGES_FILE = "messages.csv"
 _CONNECTIONS_FILE = "Connections.csv"
@@ -105,11 +105,9 @@ class LinkedInConnector(Connector):
             except Exception:
                 continue
             records = []
-            counters: dict[str, int] = {}
+            seen: dict[str, int] = {}
             for row in rows:
                 conv = row.get("conversation id") or "unknown"
-                i = counters.get(conv, 0)
-                counters[conv] = i + 1
                 text = row.get("content") or None
                 subject = row.get("subject") or None
                 if text is None and subject is None:
@@ -118,7 +116,10 @@ class LinkedInConnector(Connector):
                     NormalizedRecord(
                         connector=self.id,
                         type=RecordType.MESSAGE,
-                        uid=f"msg:{conv}:{i}",
+                        # Position within the CSV is not stable across exports.
+                        uid=stable_uid(
+                            "msg", conv, row.get("date"), row.get("from"), text, subject, seen=seen
+                        ),
                         created_at=row.get("date") or None,
                         text=text,
                         author=row.get("from") or None,

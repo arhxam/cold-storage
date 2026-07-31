@@ -24,8 +24,10 @@ def get_home() -> Path:
 class Layout:
     """Resolves and (optionally) creates the standard directory layout."""
 
-    def __init__(self, home: Path | None = None) -> None:
-        self.home = (home or get_home()).resolve()
+    def __init__(self, home: Path | str | None = None) -> None:
+        # Accept a str: callers get this path from env vars and CLI args, and
+        # AttributeError on a plain string is a pointlessly sharp edge.
+        self.home = Path(home).resolve() if home else get_home().resolve()
 
     @property
     def config_file(self) -> Path:

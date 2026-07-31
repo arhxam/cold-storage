@@ -11,6 +11,7 @@ does not care how the data was obtained.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import zipfile
 from abc import ABC, abstractmethod
@@ -64,6 +65,29 @@ def ensure_unpacked(path: Path, dest: Path) -> Path:
             zf.extractall(dest)
         return dest
     return path
+
+
+def stable_uid(prefix: str, *parts: object, seen: dict[str, int] | None = None) -> str:
+    """A dedup key derived from a record's content, never its position.
+
+    Using a list index means an export with one new item prepended — which is
+    how Instagram, Snapchat and Google Takeout all deliver updates — shifts
+    every later item onto a different uid. The archive then stores a second
+    copy of everything old, and the genuinely new item lands on a uid that
+    already exists and is dropped as a duplicate. The user is told it worked.
+
+    Identical-looking records do occur (three photos posted in one second, with
+    no caption). Pass ``seen`` to give the second and later occurrences a
+    stable suffix, so they stay distinct without reintroducing position.
+    """
+    body = "|".join("" if p is None else str(p) for p in parts)
+    h = hashlib.sha1(body.encode("utf-8", "replace")).hexdigest()[:20]
+    if seen is not None:
+        n = seen.get(h, 0)
+        seen[h] = n + 1
+        if n:
+            return f"{prefix}:{h}:{n}"
+    return f"{prefix}:{h}"
 
 
 # -- registry ---------------------------------------------------------------

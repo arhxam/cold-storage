@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..models import Batch, NormalizedRecord, RecordType
-from .base import Connector, load_json, register
+from .base import Connector, load_json, register, stable_uid
 
 # Google Chat's ``created_date`` looks like
 # "Tuesday, January 2, 2024 at 10:15:00 AM UTC".
@@ -94,7 +94,8 @@ class GoogleConnector(Connector):
                 if not isinstance(data, list):
                     continue
                 records: list[NormalizedRecord] = []
-                for i, entry in enumerate(data):
+                seen: dict[str, int] = {}
+                for entry in data:
                     if not isinstance(entry, dict):
                         continue
                     subtitles = entry.get("subtitles") or []
@@ -106,7 +107,12 @@ class GoogleConnector(Connector):
                         NormalizedRecord(
                             connector=self.id,
                             type=RecordType.OTHER,
-                            uid=f"yt:{kind}:{ts or 'na'}:{i}",
+                            # Takeout returns history newest-first, so an
+                            # index would renumber everything on every export.
+                            uid=stable_uid(
+                                "yt", kind, ts, entry.get("titleUrl"),
+                                entry.get("title"), seen=seen,
+                            ),
                             created_at=ts,
                             text=entry.get("title"),
                             author=channel,
@@ -126,7 +132,8 @@ class GoogleConnector(Connector):
             except OSError:
                 continue
             records = []
-            for i, row in enumerate(rows):
+            seen: dict[str, int] = {}
+            for row in rows:
                 channel_id = (row.get("Channel Id") or "").strip()
                 title = (row.get("Channel Title") or "").strip()
                 if not channel_id and not title:
@@ -135,7 +142,7 @@ class GoogleConnector(Connector):
                     NormalizedRecord(
                         connector=self.id,
                         type=RecordType.FOLLOWING,
-                        uid=f"yt:sub:{channel_id or i}",
+                        uid=stable_uid("yt:sub", channel_id or title, seen=seen),
                         text=title or None,
                         extra={"channel_url": (row.get("Channel Url") or "").strip() or None},
                     )
@@ -155,7 +162,8 @@ class GoogleConnector(Connector):
                 continue
             group = messages_file.parent.name
             records = []
-            for i, msg in enumerate(data.get("messages", [])):
+            seen: dict[str, int] = {}
+            for msg in data.get("messages", []):
                 if not isinstance(msg, dict):
                     continue
                 creator = msg.get("creator") or {}
@@ -166,7 +174,10 @@ class GoogleConnector(Connector):
                     NormalizedRecord(
                         connector=self.id,
                         type=RecordType.MESSAGE,
-                        uid=f"chat:{group}:{raw_date or 'na'}:{i}",
+                        uid=stable_uid(
+                            "chat", group, raw_date, creator.get("email"),
+                            msg.get("text"), seen=seen,
+                        ),
                         created_at=_chat_iso(raw_date),
                         text=msg.get("text"),
                         author=creator.get("name"),

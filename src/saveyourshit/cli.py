@@ -172,13 +172,27 @@ def ingest(
             result = Engine(archive).ingest(
                 path, connector_id=connector, keep_snapshot=keep_snapshot
             )
+        except KeyError:
+            # A typo in --connector is a user error, not a crash.
+            known = ", ".join(sorted(c.id for c in connectors.all_connectors()))
+            _fail(f"unknown platform {connector!r}. Choose one of: {known}")
         except ValueError as exc:
             # "I don't recognize this" is a normal thing for a user to hit — the
             # usual cause is an HTML export instead of JSON. Say what to do
             # about it instead of printing a traceback.
             _fail_unrecognized(path, exc)
     if result.status == "error":
-        err.print(f"[yellow]partial ingest:[/] {result.error}")
+        # Say it plainly and exit non-zero: a green tick on a partial import is
+        # how someone ends up believing they have a backup they do not have.
+        err.print(
+            f"[yellow]⚠[/] Backed up [bold]{result.added}[/] items from "
+            f"[bold]{result.connector}[/], but part of this export could not be read."
+        )
+        err.print(f"  {result.error}")
+        err.print("[dim]  Some of your data may be missing. Re-download the export and retry.[/]")
+        if result.snapshot:
+            err.print(f"[dim]  Raw export kept at: {result.snapshot}[/]")
+        raise typer.Exit(3)
     console.print(
         f"[green]✓[/] Backed up [bold]{result.added}[/] new items from "
         f"[bold]{result.connector}[/] ({result.batches} batches)."
@@ -247,7 +261,7 @@ def status(
     console.print(
         Panel.fit(
             f"[bold]{st.home}[/]\n"
-            f"{'🔒 encrypted' if st.encrypted else '⚠ not encrypted'} · "
+            f"{'🔒 media encrypted' if st.encrypted else '⚠ not encrypted'} · "
             f"{st.total_records:,} items · {st.blob_count:,} media files · "
             f"{human_bytes(st.total_bytes)}",
             title="Your archive",
@@ -421,6 +435,16 @@ def recover(
         km.cache_in_keychain(cipher)
     except KeyError_ as e:
         _fail(str(e))
+    except Exception:
+        # This is the most stressful moment this tool has: the user has lost
+        # their passphrase and is typing a code off paper. A Python traceback
+        # here is unforgivable — and base32 has no 0, 1 or 8, which is exactly
+        # what people substitute for O, I and B.
+        _fail(
+            "that recovery code could not be read.\n"
+            "  Check for typos — the code never contains the digits 0, 1 or 8,\n"
+            "  so those are usually the letters O, I and B."
+        )
     console.print("[green]✓[/] Recovered. New passphrase set.")
 
 

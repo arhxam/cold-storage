@@ -34,3 +34,21 @@ def fix_meta_mojibake_deep(obj):
     if isinstance(obj, dict):
         return {fix_meta_mojibake(k): fix_meta_mojibake_deep(v) for k, v in obj.items()}
     return obj
+
+
+def sqlite_safe(text: str | None) -> str | None:
+    """Strip lone surrogates so text can be stored.
+
+    Real exports contain them: a platform that stored a broken emoji, or any
+    text that survived a bad UTF-16 round trip, yields code points like
+    ``\\ud83d`` with no pair. Python holds those happily but sqlite cannot bind
+    them, and the resulting UnicodeEncodeError used to abort the whole import.
+    Dropping the orphan is the only lossless-for-everything-else option.
+    """
+    if not text:
+        return text
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return text.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+    return text

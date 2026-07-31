@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
-from .base import Connector, load_json, register
+from .base import Connector, load_json, register, stable_uid
 from .meta_common import parse_message_threads
 
 
@@ -66,7 +66,8 @@ class FacebookConnector(Connector):
             data = load_json(posts_file, fix_mojibake=True)
             entries = data if isinstance(data, list) else data.get("posts", [])
             records, media = [], []
-            for i, entry in enumerate(entries):
+            seen: dict[str, int] = {}
+            for entry in entries:
                 if not isinstance(entry, dict):
                     continue
                 ts = entry.get("timestamp")
@@ -76,7 +77,9 @@ class FacebookConnector(Connector):
                         text = d["post"]
                         break
                 text = text or entry.get("title")
-                uid = f"post:{ts}:{i}"
+                # Content-derived: a list index would renumber every post the
+                # next time Facebook hands back an export with a new one on top.
+                uid = stable_uid("post", ts, text, seen=seen)
                 records.append(
                     NormalizedRecord(
                         connector=self.id,

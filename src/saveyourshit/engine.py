@@ -50,7 +50,12 @@ class Engine:
 
         started = _now()
         with tempfile.TemporaryDirectory(prefix="syt-unpack-") as tmp:
-            unpacked = ensure_unpacked(source, Path(tmp) / "export")
+            # Unpack under the export's own name, not a constant. WhatsApp's
+            # iOS zips are all just "_chat.txt", so the containing folder IS
+            # the conversation name — with a fixed "export" every chat you
+            # ingested collided into one thread and all but the first was
+            # silently dropped as a duplicate.
+            unpacked = ensure_unpacked(source, Path(tmp) / (_safe_dirname(source.stem) or "export"))
             connector = self._resolve_connector(unpacked, connector_id)
             if connector is None:
                 raise ValueError(
@@ -58,19 +63,46 @@ class Engine:
                     + ", ".join(c.id for c in connectors.all_connectors())
                 )
 
-            snapshot = self._snapshot(source, unpacked, connector.id) if keep_snapshot else None
+            # Keeping a raw copy is a nice-to-have; failing to make one must not
+            # cost the user the actual backup. A dangling symlink inside an
+            # export used to abort here, before a single record was stored.
+            snapshot = None
+            snapshot_error: str | None = None
+            if keep_snapshot:
+                try:
+                    snapshot = self._snapshot(source, unpacked, connector.id)
+                except Exception as exc:
+                    snapshot_error = f"raw copy skipped ({type(exc).__name__}: {exc})"
 
             added = 0
             batches = 0
-            error: str | None = None
+            errors: list[str] = []
             status = "ok"
-            try:
-                for batch in connector.parse_export(unpacked):
+
+            # One unreadable file must not cost the user the rest of their
+            # export. A generator that raises is finished, so the loop is
+            # driven by hand: a failure inside `next()` ends parsing, but a
+            # failure while STORING one batch only skips that batch.
+            it = iter(connector.parse_export(unpacked))
+            while True:
+                try:
+                    batch = next(it)
+                except StopIteration:
+                    break
+                except Exception as exc:  # parsing stopped; keep what we have
+                    errors.append(f"{type(exc).__name__}: {exc}")
+                    break
+                try:
                     added += self.archive.ingest_batch(batch)
                     batches += 1
-            except Exception as exc:  # keep partial progress, record the failure
+                except Exception as exc:  # this batch only
+                    errors.append(f"{type(exc).__name__}: {exc}")
+            if errors:
                 status = "error"
-                error = f"{type(exc).__name__}: {exc}"
+            if snapshot_error:
+                errors.append(snapshot_error)  # reported, but not a failed import
+            # Keep every distinct reason, but bound what we store.
+            error = "; ".join(dict.fromkeys(errors))[:2000] or None
 
         finished = _now()
         self.archive.index.record_run(connector.id, started, finished, status, added, error)
@@ -101,7 +133,10 @@ class Engine:
                 continue
             try:
                 results.append(self.ingest(child, keep_snapshot=keep_snapshot))
-            except (ValueError, FileNotFoundError):
+            except Exception:
+                # A password-protected zip, a dangling symlink, an unreadable
+                # file — one bad item in ~/Downloads must not stop the sweep
+                # before it reaches the real exports.
                 continue  # not a recognizable export — skip quietly
         if results:
             return results
@@ -124,10 +159,22 @@ class Engine:
         if original.is_file():
             shutil.copy2(original, dest / original.name)
         else:
-            target = dest / "export"
+            # Name the copy after the export, so two folders ingested on the
+            # same day don't silently overwrite (or skip) one another.
+            target = dest / (_safe_dirname(original.name) or "export")
             if not target.exists():
-                shutil.copytree(unpacked, target)
+                # Real exports contain symlinks, some of them dangling; copy the
+                # link itself rather than chasing it into an error.
+                shutil.copytree(
+                    unpacked, target, symlinks=True, ignore_dangling_symlinks=True
+                )
         return dest
+
+
+def _safe_dirname(name: str) -> str:
+    """A filesystem-safe directory name derived from an export's own name."""
+    cleaned = "".join(c for c in (name or "") if c.isalnum() or c in " ._-()&+").strip(" .")
+    return cleaned[:120]
 
 
 def _now() -> str:
