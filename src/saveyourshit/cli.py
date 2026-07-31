@@ -162,6 +162,46 @@ def ingest(
 
 
 @app.command()
+def check(
+    path: Path = typer.Argument(..., help="An export .zip or folder to inspect."),
+    connector: str | None = typer.Option(None, "--connector", "-c", help="Force a connector."),
+) -> None:
+    """Dry-run: inspect an export and report what would be backed up. Writes nothing.
+
+    Run this on your real export BEFORE `ingest` to confirm the parser matches your
+    data — it prints how many messages, followers, posts, and media it recognized.
+    """
+    from .preflight import check_export
+
+    if not path.exists():
+        _fail(f"no such file or folder: {path}")
+    with console.status(f"Inspecting {path.name}…"):
+        result = check_export(path, connector_id=connector)
+
+    if result.connector is None:
+        err.print("[red]Not recognized as any supported export.[/]")
+        for warn in result.warnings:
+            err.print(f"  [yellow]•[/] {warn}")
+        raise typer.Exit(1)
+
+    console.print(f"[green]✓[/] Detected: [bold]{result.connector}[/]")
+    table = Table(show_header=False, box=None, pad_edge=False)
+    table.add_column(justify="right", style="bold")
+    table.add_column()
+    for type_, n in sorted(result.counts.items(), key=lambda kv: -kv[1]):
+        table.add_row(f"{n:,}", type_)
+    if result.threads:
+        table.add_row(f"{result.threads:,}", "conversations")
+    if result.media_refs:
+        table.add_row(f"{result.media_refs:,}", "media referenced")
+    console.print(table)
+    for warn in result.warnings:
+        err.print(f"  [yellow]⚠ {warn}[/]")
+    if not result.warnings:
+        console.print("[dim]Looks good. Run `syt ingest` to back it up.[/]")
+
+
+@app.command()
 def status(
     passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable JSON output."),

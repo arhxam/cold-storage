@@ -18,6 +18,21 @@ _MEDIA_KEYS = {
     "gifs": "image",
 }
 
+# Media ``uri`` values are rooted differently across Meta export layouts:
+# Instagram uris include the ``your_instagram_activity/`` prefix (so ``root/uri``
+# works), but Facebook uris start with ``messages/...`` while the files live under
+# ``your_facebook_activity/`` (or the older ``your_activity_across_facebook/``).
+# Try each candidate root and keep the first that exists.
+_MEDIA_ROOTS = ("", "your_facebook_activity", "your_activity_across_facebook")
+
+
+def _resolve_media_path(root: Path, uri: str) -> str:
+    for prefix in _MEDIA_ROOTS:
+        candidate = (root / prefix / uri) if prefix else (root / uri)
+        if candidate.exists():
+            return str(candidate)
+    return str(root / uri)  # record the ref even if the file is absent
+
 
 def _ms_to_iso(ms: int | None) -> str | None:
     if not ms:
@@ -89,10 +104,22 @@ def parse_message_threads(root: Path, connector: str) -> Iterator[Batch]:
                         MediaRef(
                             owner_uid=uid,
                             kind=kind,
-                            source_path=str(root / uri),
+                            source_path=_resolve_media_path(root, uri),
                             filename=Path(uri).name,
                         )
                     )
+            # a sticker is a single object, not inside any media array
+            sticker = msg.get("sticker")
+            sticker_uri = sticker.get("uri") if isinstance(sticker, dict) else None
+            if sticker_uri:
+                media.append(
+                    MediaRef(
+                        owner_uid=uid,
+                        kind="image",
+                        source_path=_resolve_media_path(root, sticker_uri),
+                        filename=Path(sticker_uri).name,
+                    )
+                )
             records.append(rec)
         if records:
             yield Batch(records=records, media=media)
@@ -110,7 +137,14 @@ def parse_followers_list(
     if isinstance(data, list):
         items = data
     elif isinstance(data, dict):
-        items = data.get(key, [])
+        items = data.get(key, []) if key else []
+        # Fallback for older exports (e.g. pre-2021 followers used the key
+        # ``relationships_followers``): use the first ``relationships_*`` list.
+        if not items:
+            for k, v in data.items():
+                if k.startswith("relationships_") and isinstance(v, list):
+                    items = v
+                    break
     else:
         items = []
     records: list[NormalizedRecord] = []
