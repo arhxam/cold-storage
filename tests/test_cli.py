@@ -90,3 +90,23 @@ def test_version():
     r = runner.invoke(app, ["version"])
     assert r.exit_code == 0
     assert "Save Your Shit" in r.output
+
+
+def test_status_json(home, instagram_export, monkeypatch):
+    runner.invoke(app, ["init", "--no-encrypt"])
+    runner.invoke(app, ["ingest", str(instagram_export)])
+    r = runner.invoke(app, ["status", "--json"])
+    assert r.exit_code == 0, r.output
+    import json
+
+    data = json.loads(r.output)
+    assert data["total_records"] > 0
+    assert any(c["connector"] == "instagram" for c in data["connectors"])
+
+
+def test_doctor(home):
+    runner.invoke(app, ["init", "--no-encrypt"])
+    r = runner.invoke(app, ["doctor"])
+    assert r.exit_code == 0
+    assert "initialized" in r.output
+    assert "restic" in r.output

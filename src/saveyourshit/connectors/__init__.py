@@ -3,8 +3,12 @@
 from . import (  # noqa: F401  (register on import)
     discord,
     facebook,
+    google,
     instagram,
+    linkedin,
     reddit,
+    slack,
+    snapchat,
     telegram,
     twitter,
     whatsapp,

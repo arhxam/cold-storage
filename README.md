@@ -94,9 +94,12 @@ X ~7 days), so grab them promptly.
 | **Telegram** | Telegram Desktop → Settings → Advanced → Export Telegram data | Choose **JSON**. Full chat history, zero risk. |
 | **Reddit** | reddit.com → Settings → Privacy → Request a copy of your data | CSV export; one request per 30 days. |
 | **WhatsApp** | In any chat → ⋮ → More → Export chat | Point `syt` at the exported `.txt` (with media). Fully local. |
+| **Google / YouTube** | [Google Takeout](https://takeout.google.com) | Watch/search history, subscriptions, Google Chat. |
+| **Slack** | Workspace → Settings → Import/Export Data → Export | Per-channel messages + files. |
+| **Snapchat** | accounts.snapchat.com → My Data | Saved chats + Memories (links expire ~7 days — ingest promptly). |
+| **LinkedIn** | Settings → Data Privacy → Get a copy of your data | Messages + connections. Link expires in 72h. |
 
-Run `syt connectors` to see everything supported. More (Google, Snapchat, Slack)
-are on the [roadmap](#roadmap).
+Run `syt connectors` to see everything supported.
 
 ## Your data & your keys
 

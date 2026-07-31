@@ -136,11 +136,21 @@ def ingest(
 
 
 @app.command()
-def status(passphrase: str | None = typer.Option(None, help="Passphrase (if not cached).")) -> None:
+def status(
+    passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable JSON output."),
+) -> None:
     """Show what's backed up, where it lives, and what's gone stale."""
     rt = _runtime(passphrase)
     with rt.open_archive() as archive:
         st = compute_status(archive, rt.config)
+
+    if json_out:
+        import json
+        from dataclasses import asdict
+
+        typer.echo(json.dumps(asdict(st), indent=2))
+        return
 
     console.print(
         Panel.fit(
@@ -302,6 +312,79 @@ def recover(
     except KeyError_ as e:
         _fail(str(e))
     console.print("[green]✓[/] Recovered. New passphrase set.")
+
+
+@app.command()
+def schedule(
+    every: str = typer.Option("daily", help="daily | weekly."),
+    remove: bool = typer.Option(False, "--remove", help="Remove the scheduled reminder."),
+) -> None:
+    """Set up a periodic reminder that checks whether your backups have gone stale.
+
+    (Phase 1 exports are user-triggered, so this schedules a staleness check — not
+    an automatic fetch. Automatic fetching arrives with the live connectors.)
+    """
+    import shutil
+    import sys
+
+    from . import scheduler
+
+    label = "com.saveyourshit.reminder"
+    syt_path = shutil.which("syt") or f"{sys.executable} -m saveyourshit"
+
+    if remove:
+        if sys.platform == "darwin":
+            removed = scheduler.uninstall_macos(label)
+            console.print("[green]✓[/] Removed." if removed else "[dim]Nothing to remove.[/]")
+        else:
+            console.print("Remove the cron/Task Scheduler entry you added for `syt status`.")
+        return
+
+    if every not in ("daily", "weekly"):
+        _fail("--every must be 'daily' or 'weekly'")
+    interval = 86400 if every == "daily" else 604800
+
+    if sys.platform == "darwin":
+        path = scheduler.install_macos(label, [*syt_path.split(), "status"], interval)
+        console.print(f"[green]✓[/] Installed launchd reminder at [dim]{path}[/]")
+        console.print(f"  Activate it now with:  [bold]launchctl load {path}[/]")
+    elif sys.platform.startswith("linux"):
+        console.print("Add this to your crontab (`crontab -e`):")
+        console.print(f"  [bold]{scheduler.cron_line(every, f'{syt_path} status')}[/]")
+    else:
+        args = scheduler.schtasks_command(label, f"{syt_path} status", every)
+        console.print("Run this to schedule (Windows):")
+        console.print(f"  [bold]{' '.join(args)}[/]")
+
+
+@app.command()
+def doctor() -> None:
+    """Check your setup and optional tools."""
+    import shutil
+
+    layout = Layout()
+    checks: list[tuple[str, bool, str]] = []
+    checks.append(("initialized", layout.exists(), str(layout.home)))
+    if layout.exists():
+        cfg = Config.load(layout)
+        checks.append(("encryption on", cfg.encrypt, "AES-256 at rest" if cfg.encrypt else "OFF"))
+        checks.append(
+            ("keyfile present", KeyManager(layout.keys_dir).exists(), str(layout.keys_dir))
+        )
+    checks.append(
+        ("restic (versioned backup)", shutil.which("restic") is not None, "optional")
+    )
+    checks.append(("rclone (cloud sync)", shutil.which("rclone") is not None, "optional"))
+    try:
+        import keyring  # noqa: F401
+
+        checks.append(("OS keychain library", True, "installed"))
+    except ImportError:
+        checks.append(("OS keychain library", False, "pip install saveyourshit[keyring]"))
+
+    for name, ok, note in checks:
+        mark = "[green]✓[/]" if ok else "[yellow]○[/]"
+        console.print(f"{mark} {name} [dim]{note}[/]")
 
 
 def _runtime(passphrase: str | None):
