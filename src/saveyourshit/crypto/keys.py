@@ -104,20 +104,32 @@ class KeyManager:
 
     # -- OS keychain cache ---------------------------------------------------
     def cache_in_keychain(self, cipher: Cipher) -> bool:
+        if os.environ.get("SYT_NO_KEYRING"):
+            return False
         try:
             import keyring
         except ImportError:
             return False
-        master = cipher._key  # noqa: SLF001 — intentional internal access
-        keyring.set_password(_KEYRING_SERVICE, _KEYRING_USER, base64.b64encode(master).decode())
-        return True
+        try:
+            master = cipher._key  # noqa: SLF001 — intentional internal access
+            keyring.set_password(
+                _KEYRING_SERVICE, _KEYRING_USER, base64.b64encode(master).decode()
+            )
+            return True
+        except Exception:
+            return False  # no usable keychain backend (e.g. headless Linux)
 
     def unlock_from_keychain(self) -> Cipher | None:
+        if os.environ.get("SYT_NO_KEYRING"):
+            return None
         try:
             import keyring
         except ImportError:
             return None
-        stored = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USER)
+        try:
+            stored = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USER)
+        except Exception:
+            return None
         if not stored:
             return None
         return Cipher(base64.b64decode(stored))

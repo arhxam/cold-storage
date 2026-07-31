@@ -12,8 +12,10 @@ from saveyourshit.paths import Layout
 
 @pytest.fixture(autouse=True)
 def _fast_kdf(monkeypatch):
-    """Use a cheap scrypt cost in tests so crypto suites stay fast."""
+    """Use a cheap scrypt cost in tests, and never touch the real OS keychain."""
     monkeypatch.setenv("SYT_SCRYPT_N", "1024")
+    monkeypatch.setenv("SYT_NO_KEYRING", "1")
+    monkeypatch.setenv("COLUMNS", "200")  # keep Rich from wrapping long paths in captured output
 
 
 @pytest.fixture
