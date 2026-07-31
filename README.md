@@ -31,24 +31,33 @@ entitled to and turns them into an encrypted, searchable archive you own forever
 
 ## Get started in 30 seconds
 
-You need [`uv`](https://docs.astral.sh/uv/) (or `pipx`). Then:
+**One command** (installs `uv` if needed, then the `syt` command):
 
 ```bash
-# install + run, no clone needed
-uvx saveyourshit init          # one-time: pick a passphrase, save your Recovery Kit
-uvx saveyourshit ingest ~/Downloads/instagram-export.zip
-uvx saveyourshit status        # see what's backed up and where it lives
-uvx saveyourshit search "that thing we talked about"
+curl -LsSf https://raw.githubusercontent.com/arhxam/save-your-shit/master/install.sh | sh
 ```
 
-Or install the `syt` command permanently:
+Then:
 
 ```bash
-pipx install saveyourshit      # now just: syt init, syt ingest, syt status …
+syt init                                   # pick a passphrase, save your Recovery Kit
+syt ingest ~/Downloads/instagram-export.zip   # auto-detects the platform
+syt status                                 # what's backed up and where it lives
+syt search "that thing we talked about"    # full-text search, offline
+syt view                                   # browse everything in your browser
+```
+
+Prefer to do it yourself? With [`uv`](https://docs.astral.sh/uv/) or `pipx`:
+
+```bash
+uv tool install --from git+https://github.com/arhxam/save-your-shit "saveyourshit[keyring]"
+# after the first PyPI release this becomes simply:  pipx install saveyourshit
 ```
 
 > **Download button coming:** signed desktop installers (`.dmg`/`.exe`/`.AppImage`)
 > with a dashboard + data viewer land in Phase 2 — see [the roadmap](#roadmap).
+> Until then, tagged releases attach built packages under
+> [Releases](https://github.com/arhxam/save-your-shit/releases).
 
 ## How it works
 

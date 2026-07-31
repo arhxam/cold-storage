@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Build sdist + wheel
+        run: uv build
+      - name: Attach artifacts to the GitHub Release (the "download button")
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+      # To also publish to PyPI (so `uvx saveyourshit` works), add a PyPI token
+      # as the `PYPI_TOKEN` secret and uncomment:
+      # - run: uv publish --token ${{ secrets.PYPI_TOKEN }}

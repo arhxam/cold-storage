@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12"]
+    env:
+      # never touch a real OS keychain in CI
+      SYT_NO_KEYRING: "1"
+      SYT_SCRYPT_N: "1024"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install ${{ matrix.python }}
+      - name: Sync deps
+        run: uv sync --extra keyring --python ${{ matrix.python }}
+      - name: Lint
+        run: uv run ruff check src tests
+      - name: Test
+        run: uv run pytest -q
