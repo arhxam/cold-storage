@@ -722,9 +722,11 @@ function acctState(a){
   if(a.lastResult==='reconnect')
     return {cls:'err',label:'Reconnect',line:a.detail||'The session expired. Connect again.'};
   if(a.lastResult==='error')
-    return {cls:'err',label:'Failed',line:a.detail||'The last backup did not finish.'};
+    return {cls:'err',label:'Retrying',line:(a.detail||'The last backup did not finish.')+' We keep trying on our own.'};
   if(a.lastResult==='downloading')
     return {cls:'',pulse:true,label:'Downloading',line:a.detail||'Downloading your export…'};
+  if(a.lastResult==='ingesting')
+    return {cls:'',pulse:true,label:'Backing up',line:a.detail||'Adding it to your encrypted archive…'};
   if(a.lastResult==='requested')
     return {cls:'wait',label:'Preparing',line:(a.detail||a.name+' is preparing your export')+' — we check back on our own.'};
   if(a.lastSuccess)
@@ -752,11 +754,16 @@ function showConnect(){
     rows=`<div class="card">`+auto.map(a=>{
       const st=acctState(a);
       const pill=`<span class="pill ${st.cls}"><span class="lamp${st.pulse?' pulse':''}"></span>${esc(st.label)}</span>`;
+      // A expired session cannot be fixed by retrying the sync — it needs a
+      // fresh sign-in, so route that state to Connect rather than Back up now.
+      const needsLogin = a.lastResult==='reconnect';
       const acts=a.connected
         ? `${schedSelect(a)}
-           ${(a.attention||a.lastResult==='attention'||a.lastResult==='reconnect')
-             ? `<button class="pbtn solid" data-sync="${escA(a.id)}">Finish</button>`
-             : `<button class="pbtn" data-sync="${escA(a.id)}"${a.busy?' disabled':''}>${a.busy?'<span class="spin"></span>':ic('refresh',12,2.2)} Back up now</button>`}
+           ${needsLogin
+             ? `<button class="pbtn solid" data-conn="${escA(a.id)}">${ic('plug',12,2.2)} Reconnect</button>`
+             : (a.attention||a.lastResult==='attention')
+               ? `<button class="pbtn solid" data-sync="${escA(a.id)}">Finish</button>`
+               : `<button class="pbtn" data-sync="${escA(a.id)}"${a.busy?' disabled':''}>${a.busy?'<span class="spin"></span>':ic('refresh',12,2.2)} Back up now</button>`}
            <button class="pbtn ghost" data-disc="${escA(a.id)}" title="Disconnect ${escA(a.name)}">Disconnect</button>`
         : `<button class="pbtn solid" data-conn="${escA(a.id)}">${ic('plug',12,2.2)} Connect</button>`;
       return `<div class="acct">${tile(a.id,'lg')}

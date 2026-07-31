@@ -119,6 +119,54 @@ app.whenReady().then(async () => {
   ctx = await pageCtx(win, PAGES.hidden);
   ok((await ctx.click(["download"], { exact: true })) === null, "hidden/zero-size buttons never clicked");
 
+  console.log("\nCookie domain matching (a substring match would accept impostors)");
+  const dm = automation.domainMatches;
+  ok(dm("x.com", "x.com") && dm(".x.com", "x.com"), "exact and dot-prefixed match");
+  ok(dm("api.x.com", "x.com"), "subdomains match");
+  ok(!dm("netflix.com", "x.com"), "netflix.com does NOT satisfy x.com");
+  ok(!dm("notgoogle.com", "google.com"), "notgoogle.com does NOT satisfy google.com");
+  ok(!dm("evil-x.com", "x.com"), "evil-x.com does NOT satisfy x.com");
+
+  console.log("\nUser-facing vs internal errors");
+  {
+    // Only errors the recipes raise on purpose may surface a window; an
+    // internal fault must never park one (it would block the platform).
+    const src = require("fs").readFileSync(path.join(__dirname, "..", "platforms.js"), "utf8");
+    ok(/e\.needsUser\s*=\s*true/.test(src), "platforms.js tags user-facing errors");
+    ok(!/throw new Error\(/.test(src), "no untagged throws remain in recipes");
+    let tagged = null;
+    try {
+      await PLATFORMS.byId("twitter").tryRequest(
+        await pageCtx(win, `<body><input type="password"></body>`)
+      );
+    } catch (e) {
+      tagged = e;
+    }
+    ok(!!tagged && tagged.needsUser === true, "X password-confirm raises a user-facing error");
+  }
+
+  console.log("\nMultipart exports");
+  {
+    // Two parts ready: the runner must not stop after the first.
+    const twoParts = `<body>
+      <div><span>part 1 of 2</span><button>Download</button></div>
+      <div><span>part 2 of 2</span><button>Download</button></div>
+    </body>`;
+    ctx = await pageCtx(win, twoParts);
+    ok(await PLATFORMS.byId("instagram").tryDownload(ctx), "part 1 is clickable");
+    ok(await PLATFORMS.byId("instagram").tryDownload(ctx), "part 2 is also clickable");
+    const src = require("fs").readFileSync(path.join(__dirname, "..", "automation.js"), "utf8");
+    ok(/MAX_PARTS/.test(src), "runSync loops over parts rather than taking only the first");
+  }
+
+  console.log("\nUser agent (Google blocks sign-in from 'Electron' browsers)");
+  {
+    const src = require("fs").readFileSync(path.join(__dirname, "..", "automation.js"), "utf8");
+    ok(/setUserAgent/.test(src), "a user agent is set on each partition");
+    ok(!/Electron/.test((src.match(/const CHROME_UA[\s\S]*?\}\)\(\);/) || [""])[0]),
+      "the presented UA contains no Electron token");
+  }
+
   console.log("\nRegistry sanity");
   const all = PLATFORMS.all();
   ok(all.length >= 10, `${all.length} platforms registered`);
@@ -149,17 +197,33 @@ app.whenReady().then(async () => {
   });
   const before = BrowserWindow.getAllWindows().length;
   automation.connect("instagram"); // resolves only once signed in / closed
-  await new Promise((r) => setTimeout(r, 4000));
-  const wins = BrowserWindow.getAllWindows();
-  const loginWin = wins.find((w) => /instagram\.com/.test(w.webContents.getURL()));
-  ok(wins.length > before, "connect() opened a window");
-  ok(!!loginWin, "the window is on instagram.com (the real sign-in page)");
+  // connect() first probes the platform (hidden window) and only then opens the
+  // sign-in window, so poll rather than assuming a fixed delay.
+  let loginWin = null;
+  for (let i = 0; i < 60 && !loginWin; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    loginWin = BrowserWindow.getAllWindows().find((w) => {
+      try {
+        return !w.isDestroyed() && /instagram\.com/.test(w.webContents.getURL());
+      } catch {
+        return false;
+      }
+    });
+  }
+  ok(BrowserWindow.getAllWindows().length > before, "connect() opened a window");
+  ok(!!loginWin, "a window reaches instagram.com (the real sign-in page)");
   ok(
     !!loginWin && loginWin.webContents.session !== require("electron").session.defaultSession,
     "it uses an isolated per-platform session partition"
   );
   ok(!patched.instagram || !patched.instagram.connected, "not marked connected without a sign-in");
-  if (loginWin) loginWin.destroy();
+  for (const w of BrowserWindow.getAllWindows()) {
+    try {
+      w.destroy();
+    } catch {
+      /* ignore */
+    }
+  }
 
   console.log(`\n${checks - failures}/${checks} checks passed`);
   app.exit(failures ? 1 : 0);

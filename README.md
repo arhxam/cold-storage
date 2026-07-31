@@ -73,6 +73,24 @@ so those stay manual — but anything matching an export that lands in your
 The app keeps running in the menu bar after you close the window; that is what
 lets the schedule fire. Quit it from there to stop entirely.
 
+### Built to be left alone
+
+It starts at login, so a reboot resumes the schedule instead of resetting it.
+Sign-ins live in a per-platform session on your Mac and are flushed to disk
+before every quit, so you connect once and stay connected; if a platform really
+does log you out, the app detects it by asking the platform — not by trusting a
+stale cookie — and asks you to reconnect.
+
+Nothing is dropped along the way. Every downloaded export goes onto a queue that
+is written to disk *before* the backup starts, so a crash, a power cut, or a
+quit mid-backup is picked up and finished on the next launch. Two exports
+finishing at once are both backed up. A failed backup retries with backoff and
+keeps the file; it is never silently discarded.
+
+Schedules are wall-clock based, so a laptop that was asleep or shut down for a
+week is immediately due on wake rather than waiting out a fresh interval. When
+idle it stays cheap: no windows, no viewer process, and one timer.
+
 ## Get started in 30 seconds
 
 **One command** (installs `uv` if needed, then the `syt` command):

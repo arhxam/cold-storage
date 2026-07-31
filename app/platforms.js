@@ -20,6 +20,18 @@
 //   tryRequest(ctx)  -> true if a new export request was submitted
 //   throw Error(msg) -> "needs attention": the window is shown with `msg`.
 
+/**
+ * Raise a message meant for the user — a step only they can complete (a 2FA
+ * prompt, a password re-confirm). The runner shows the window for these and
+ * ONLY these; an internal fault must not park a window on screen, because a
+ * parked window blocks that platform from ever syncing again.
+ */
+function needsUser(message) {
+  const e = new Error(message);
+  e.needsUser = true;
+  return e;
+}
+
 // ---------------------------------------------------------------------------
 // Meta (Instagram / Facebook) — Account Center "Download your information"
 // ---------------------------------------------------------------------------
@@ -49,7 +61,7 @@ async function metaRequest(ctx) {
   }
   const created = await ctx.click(["create files", "create file"], { timeout: 12000 });
   if (!created) {
-    throw new Error("Almost there — pick JSON format and press Create files in the window.");
+    throw needsUser("Almost there — pick JSON format and press Create files in the window.");
   }
   return true;
 }
@@ -64,13 +76,13 @@ async function xDownload(ctx) {
 
 async function xRequest(ctx) {
   if (await ctx.hasSel('input[type="password"]')) {
-    throw new Error("X wants your password to confirm — enter it in the window, then press Request archive.");
+    throw needsUser("X wants your password to confirm — enter it in the window, then press Request archive.");
   }
   const hit = await ctx.click(["request archive"], { timeout: 10000, exact: true });
   if (!hit) return false;
   await ctx.sleep(2500);
   if (await ctx.hasSel('input[type="password"]')) {
-    throw new Error("X wants your password to confirm — enter it in the window, then press Request archive.");
+    throw needsUser("X wants your password to confirm — enter it in the window, then press Request archive.");
   }
   return true;
 }
