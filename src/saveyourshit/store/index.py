@@ -177,6 +177,16 @@ class Index:
         ).fetchone()
         return dict(row) if row else None
 
+    def iter_records(self, *, limit: int | None = None) -> list[dict]:
+        """Return all records (optionally capped), oldest-ish first, for the viewer."""
+        sql = (
+            "SELECT connector, type, uid, created_at, author, thread, text, media "
+            "FROM records ORDER BY connector, thread, created_at"
+        )
+        if limit is not None:
+            sql += f" LIMIT {int(limit)}"
+        return [dict(r) for r in self._conn.execute(sql).fetchall()]
+
     def records_for_type(self, connector: str, type_: RecordType, limit: int = 100) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM records WHERE connector=? AND type=? ORDER BY created_at LIMIT ?",

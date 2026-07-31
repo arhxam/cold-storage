@@ -205,6 +205,26 @@ def search(
         )
 
 
+@app.command()
+def view(
+    output: Path | None = typer.Option(None, "--output", "-o", help="Where to write the HTML."),
+    open_browser: bool = typer.Option(True, "--open/--no-open", help="Open it when done."),
+    passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
+) -> None:
+    """Build a self-contained offline HTML viewer of your archive."""
+    from .viewer import build_viewer
+
+    rt = _runtime(passphrase)
+    out = output or (rt.layout.home / "viewer.html")
+    with rt.open_archive() as archive:
+        path = build_viewer(archive, out)
+    console.print(f"[green]✓[/] Viewer written to [bold]{path}[/]")
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(path.as_uri())
+
+
 @app.command(name="connectors")
 def connectors_cmd() -> None:
     """List the platforms this can back up."""
