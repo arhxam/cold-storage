@@ -87,8 +87,10 @@ class TestResticArgv:
 
     def test_snapshot_multiple_paths_accepts_pathlib(self, repo, runner):
         repo.snapshot([Path("/data/a"), "/data/b"], "pw")
+        # Path inputs are stringified to native separators (native paths are what
+        # restic wants on Windows), so compare against str(Path(...)) for OS-agnosticism.
         assert runner.last_argv == [
-            "restic", "--repo", "/backups/syt-repo", "backup", "/data/a", "/data/b",
+            "restic", "--repo", "/backups/syt-repo", "backup", str(Path("/data/a")), "/data/b",
         ]
 
     def test_snapshot_with_tags(self, repo, runner):
@@ -117,7 +119,7 @@ class TestResticArgv:
         repo.restore("ab12cd34", Path("/tmp/restored"), "pw")
         assert runner.last_argv == [
             "restic", "--repo", "/backups/syt-repo",
-            "restore", "ab12cd34", "--target", "/tmp/restored",
+            "restore", "ab12cd34", "--target", str(Path("/tmp/restored")),
         ]
         assert runner.last_env == {"RESTIC_PASSWORD": "pw"}
 
@@ -128,7 +130,7 @@ class TestResticArgv:
     def test_repo_accepts_pathlib(self, tool_installed, runner):
         repo = ResticRepo(Path("/somewhere/repo"), runner=runner)
         repo.init("pw")
-        assert runner.last_argv == ["restic", "--repo", "/somewhere/repo", "init"]
+        assert runner.last_argv == ["restic", "--repo", str(Path("/somewhere/repo")), "init"]
 
     def test_custom_binary_used_in_argv(self, tool_installed, runner):
         repo = ResticRepo("/r", binary="/opt/syt/bin/restic", runner=runner)
@@ -157,7 +159,7 @@ class TestRcloneArgv:
 
     def test_sync_accepts_pathlib(self, remote, runner):
         remote.sync(Path("/data/archive"), "drive:backups")
-        assert runner.last_argv == ["rclone", "sync", "/data/archive", "drive:backups"]
+        assert runner.last_argv == ["rclone", "sync", str(Path("/data/archive")), "drive:backups"]
 
     def test_copy(self, remote, runner):
         remote.copy("/data/archive", "dropbox:syt")
