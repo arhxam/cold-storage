@@ -76,16 +76,20 @@ def test_parse_messages(tmp_path: Path) -> None:
 
     first = msgs[0]
     assert first.connector == "linkedin"
-    assert first.uid == "msg:conv-1:0"
     assert first.author == "Alice Anderson"
     assert first.thread == "conv-1"
     assert first.created_at == "2023-01-05 10:00:00 UTC"
     assert first.text == "Hey! Long time no see"
 
-    # per-conversation index makes uids unique and stable
-    assert msgs[1].uid == "msg:conv-1:1"
-    assert msgs[2].uid == "msg:conv-2:0"
+    # uids are unique, and derived from content rather than row position — a
+    # later export with a new message must not renumber these.
+    assert len({m.uid for m in msgs}) == 3
+    assert all(m.uid.startswith("msg:") for m in msgs)
     assert msgs[2].extra["subject"] == "Job opportunity"
+
+    # Re-parsing the same export yields exactly the same uids.
+    again = [r for r in parse_all(export) if r.type == RecordType.MESSAGE]
+    assert [m.uid for m in again] == [m.uid for m in msgs]
 
 
 def test_parse_connections_skips_notes_preamble(tmp_path: Path) -> None:

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
-from .base import Connector, load_json, register
+from .base import Connector, load_json, register, stable_uid
 from .meta_common import parse_followers_list, parse_message_threads
 
 
@@ -49,7 +49,8 @@ class InstagramConnector(Connector):
             entries = data if isinstance(data, list) else data.get("posts", [])
             records: list[NormalizedRecord] = []
             media: list[MediaRef] = []
-            for i, entry in enumerate(entries):
+            seen: dict[str, int] = {}
+            for entry in entries:
                 if not isinstance(entry, dict):
                     continue
                 media_items = entry.get("media", [])
@@ -57,7 +58,10 @@ class InstagramConnector(Connector):
                 if not ts and media_items:
                     ts = media_items[0].get("creation_timestamp")
                 title = entry.get("title") or (media_items[0].get("title") if media_items else None)
-                uid = f"post:{ts}:{i}"
+                # Instagram prepends new posts, so a list index would rename
+                # every older post on each re-export and duplicate the lot.
+                uris = ",".join(str(m.get("uri")) for m in media_items if isinstance(m, dict))
+                uid = stable_uid("post", ts, title, uris, seen=seen)
                 records.append(
                     NormalizedRecord(
                         connector=self.id,

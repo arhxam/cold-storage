@@ -178,7 +178,17 @@ def ingest(
             # about it instead of printing a traceback.
             _fail_unrecognized(path, exc)
     if result.status == "error":
-        err.print(f"[yellow]partial ingest:[/] {result.error}")
+        # Say it plainly and exit non-zero: a green tick on a partial import is
+        # how someone ends up believing they have a backup they do not have.
+        err.print(
+            f"[yellow]⚠[/] Backed up [bold]{result.added}[/] items from "
+            f"[bold]{result.connector}[/], but part of this export could not be read."
+        )
+        err.print(f"  {result.error}")
+        err.print("[dim]  Some of your data may be missing. Re-download the export and retry.[/]")
+        if result.snapshot:
+            err.print(f"[dim]  Raw export kept at: {result.snapshot}[/]")
+        raise typer.Exit(3)
     console.print(
         f"[green]✓[/] Backed up [bold]{result.added}[/] new items from "
         f"[bold]{result.connector}[/] ({result.batches} batches)."

@@ -157,9 +157,15 @@ def test_parse_subscriptions(tmp_path: Path):
     records = parse_all(make_takeout(tmp_path))
     subs = [r for r in records if r.type == RecordType.FOLLOWING]
     assert len(subs) == 2
-    by_uid = {r.uid: r for r in subs}
-    assert by_uid["yt:sub:UCabc"].text == "Workshop Channel"
-    assert by_uid["yt:sub:UCdef"].extra["channel_url"] == "https://www.youtube.com/channel/UCdef"
+    by_text = {r.text: r for r in subs}
+    assert "Workshop Channel" in by_text
+    assert by_text["Cooking Daily"].extra["channel_url"] == (
+        "https://www.youtube.com/channel/UCdef"
+    )
+    # uids are content-derived and stable across re-parses
+    assert len({r.uid for r in subs}) == 2
+    again = [r for r in parse_all(make_takeout(tmp_path / "again")) if r.type == RecordType.FOLLOWING]
+    assert {r.uid for r in again} == {r.uid for r in subs}
 
 
 # -- Google Chat -------------------------------------------------------------

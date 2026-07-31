@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
-from .base import Connector, register
+from .base import Connector, register, stable_uid
 
 # Invisible marks WhatsApp sprinkles into exports: LRM, RLM, and a possible BOM.
 _MARKS = "\u200e\u200f\ufeff"  # LRM, RLM, BOM
@@ -159,7 +159,7 @@ class WhatsAppConnector(Connector):
         thread = _thread_name(txt)
         records: list[NormalizedRecord] = []
         media: list[MediaRef] = []
-        idx = 0
+        seen: dict[str, int] = {}
         current: NormalizedRecord | None = None
         for raw in txt.read_text(encoding="utf-8", errors="replace").splitlines():
             # tolerate CRLF files and strip the LRM/RLM/BOM prefix real exports carry
@@ -172,8 +172,9 @@ class WhatsAppConnector(Connector):
                     author, text = rest.split(": ", 1)
                 else:
                     author, text = None, rest  # system message
-                uid = f"msg:{thread}:{idx}"
-                idx += 1
+                # Chat exports are append-only, but re-exporting the same chat
+                # after new messages arrive must not renumber the old ones.
+                uid = stable_uid("msg", thread, m.group("date"), author, text, seen=seen)
                 current = NormalizedRecord(
                     connector=self.id,
                     type=RecordType.MESSAGE,

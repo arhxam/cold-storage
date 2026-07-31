@@ -12,6 +12,7 @@ binding a socket.
 from __future__ import annotations
 
 import json
+from contextlib import suppress
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -39,15 +40,18 @@ def api_records(archive: Archive, qs: dict[str, list[str]]) -> list[dict]:
     connector = (qs.get("connector") or [None])[0]
     type_ = (qs.get("type") or [None])[0]
     query = (qs.get("q") or [""])[0]
-    limit = int((qs.get("limit") or ["300"])[0])
+    limit = _int_arg(qs, "limit", default=300, lo=1, hi=10000)
     if query:
         return archive.index.search(query, connector=connector or None, limit=limit)
-    rows = archive.index.iter_records(limit=limit * 8)
-    if connector:
-        rows = [r for r in rows if r["connector"] == connector]
-    if type_:
-        rows = [r for r in rows if r["type"] == type_]
-    return rows[:limit]
+    return archive.index.records_page(connector=connector, type_=type_, limit=limit)
+
+
+def _int_arg(qs: dict[str, list[str]], name: str, *, default: int, lo: int, hi: int) -> int:
+    """Query-string integers come from a URL, so they can be anything."""
+    try:
+        return max(lo, min(hi, int((qs.get(name) or [str(default)])[0])))
+    except (TypeError, ValueError):
+        return default
 
 
 def api_threads(archive: Archive, connector: str) -> dict:
@@ -201,12 +205,10 @@ def serve(
                 # Blobs are addressed by content hash, so they can never change.
                 self.send_header("Cache-Control", "private, max-age=31536000, immutable")
             self.end_headers()
-            try:
+            # The browser cancelling a request (scrolling away from an image,
+            # closing the tab) is normal, not an error worth surfacing.
+            with suppress(BrokenPipeError, ConnectionResetError):
                 self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
-                # The browser cancelled the request (scrolled away from an
-                # image, closed the tab). Not an error worth surfacing.
-                pass
 
     httpd = HTTPServer((host, port), Handler)
     url = f"http://{host}:{port}/"
@@ -464,7 +466,9 @@ INDEX_HTML = r"""<!doctype html>
   .pane{ display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; background:var(--bg); }
   .pane .top{ padding:13px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center;
               gap:12px; background:rgba(21,19,17,.6); flex:none; }
-  .pane .top .nm{ font-weight:650; font-size:14.5px; letter-spacing:-.01em; }
+  .pane .top > div{ min-width:0; flex:1; }
+  .pane .top .nm{ font-weight:650; font-size:14.5px; letter-spacing:-.01em;
+                  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pane .top .sub{ color:var(--text-3); font-size:11.5px; font-variant-numeric:tabular-nums; }
   .msgs{ flex:1; min-height:0; overflow-y:auto; padding:10px 22px 28px; }
   .msgstream{ max-width:840px; margin:0 auto; display:flex; flex-direction:column; }
@@ -632,7 +636,7 @@ INDEX_HTML = r"""<!doctype html>
   <button class="tbtn icon" id="tb-menu" aria-label="More"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
 </div>
 <div class="app mode-dash" id="app">
-  <nav class="rail" id="rail"></nav>
+  <nav class="rail" id="rail" aria-label="Platforms"></nav>
   <section class="list" id="list" hidden></section>
   <main class="pane" id="pane"><div class="boot"><div class="spinner" role="status" aria-label="Loading"></div></div></main>
 </div>
@@ -705,10 +709,16 @@ function tile(id,cls){
 }
 function avColor(s){let h=0;for(const c of (s||'?'))h=(h*31+c.charCodeAt(0))>>>0;return AV[h%AV.length];}
 function initial(s){return esc((s||'?').trim()[0]?.toUpperCase()||'?');}
-function fmtTime(s){return (s||'').slice(11,16);}
+/* Timestamps are archive data like any other: a platform can hand back
+   anything, and these all land in innerHTML. Unescaped, one malformed value
+   swallowed every conversation after it in the list. */
+function fmtTime(s){return esc((s||'').slice(11,16));}
 function dayKey(s){return (s||'').slice(0,10);}
-function dayLabel(k){if(!k)return'';const p=k.split('-');const mi=+p[1]-1;if(!(mi>=0&&mi<12))return k;return MONTHS[mi]+' '+(+p[2])+', '+p[0];}
-function fmtShort(s){const k=dayKey(s);if(!k)return'';const p=k.split('-');const mi=+p[1]-1;if(!(mi>=0&&mi<12))return k;
+function dayLabel(k){if(!k)return'';const p=k.split('-');const mi=+p[1]-1;
+  if(!(mi>=0&&mi<12)||!/^\d{4}$/.test(p[0])||isNaN(+p[2]))return esc(k);
+  return MONTHS[mi]+' '+(+p[2])+', '+p[0];}
+function fmtShort(s){const k=dayKey(s);if(!k)return'';const p=k.split('-');const mi=+p[1]-1;
+  if(!(mi>=0&&mi<12)||!/^\d{4}$/.test(p[0])||isNaN(+p[2]))return esc(k);
   return +p[0]===new Date().getFullYear()?MONTHS[mi]+' '+(+p[2]):MONTHS[mi]+' '+p[0];}
 function fmtCompact(n){if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M';
   if(n>=1e4)return Math.round(n/1e3)+'k';if(n>=1e3)return (n/1e3).toFixed(1).replace(/\.0$/,'')+'k';
@@ -760,6 +770,8 @@ function openLightbox(group,sha){
   let el=document.getElementById('lightbox');
   if(!el){
     el=document.createElement('div'); el.className='lb'; el.id='lightbox';
+    el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true');
+    el.setAttribute('aria-label','Photo viewer'); el.tabIndex=-1;
     el.addEventListener('click',(e)=>{ if(e.target===el||e.target.closest('.x')) closeLightbox(); });
     document.body.appendChild(el);
     document.addEventListener('keydown',lbKeys);
@@ -776,6 +788,7 @@ function renderLightbox(){
     +(many?`<button class="nav next" aria-label="Next">${ic('chevR',20,2.2)}</button>`:'')
     +(many?`<div class="cap">${LBI+1} of ${LB.length}</div>`:'');
   el.querySelector('.x').style.transform='rotate(45deg)'; /* reuse the + glyph as a close X */
+  el.focus(); /* so Escape and the arrow keys reach the dialog, not the page behind it */
   const p=el.querySelector('.prev'), n=el.querySelector('.next');
   if(p) p.addEventListener('click',(e)=>{ e.stopPropagation(); step(-1); });
   if(n) n.addEventListener('click',(e)=>{ e.stopPropagation(); step(1); });
@@ -804,6 +817,10 @@ function skMsgs(){let h='';const w=[46,58,34,52,40,62];for(let i=0;i<6;i++)h+=`<
 let STATUS=null, active=null, activeThread=null, activeSpecial=null, SELF=null;
 let THREADS=[], SPECIALS=[], VIS=[];
 let onConnect=false;
+/* Every async view bumps this before fetching and re-checks it before painting.
+   Guarding on the thread NAME alone let a slow Instagram fetch paint into a
+   Reddit view when both had a thread called "Mom". */
+let REQ=0;
 
 /* ---------- native bridge (present only inside the desktop app) ---------- */
 const BRIDGE=(typeof window!=='undefined' && window.sytBridge) ? window.sytBridge : null;
@@ -863,7 +880,7 @@ function handleIngest(p){
   }else if(p.phase==='error'){
     const last=(p.error||'').split('\n').filter(Boolean).pop()||'Something went wrong.';
     // A file we can never read is not a failure to retry — it's an instruction.
-    if(p.permanent) updateToast(ingestToast,'bad','Can’t read '+esc(p.name||'that file'),esc(last),{ms:14000});
+    if(p.permanent) updateToast(ingestToast,'bad','Can’t read '+(p.name||'that file'),esc(last),{ms:14000});
     else updateToast(ingestToast,'bad','Backup failed',esc(last),{ms:9000});
     ingestToast=null;
   }
@@ -871,15 +888,23 @@ function handleIngest(p){
 async function refreshData(){
   try{ STATUS=await (await fetch('/api/status')).json(); }catch(e){ return; }
   renderRail();
-  if(onConnect) showConnect();
-  else if(active) openConnector(active);
-  else showDashboard();
+  // A scheduled backup can finish at any moment. Rebuilding the view would
+  // dump the user back at the top of the first conversation mid-read, so the
+  // counts refresh and the place they were keeps itself.
+  if(onConnect){ showConnect(); return; }
+  if(!active){ showDashboard(); return; }
+  const wasThread=activeThread, wasSpecial=activeSpecial, q=curQuery();
+  await openConnector(active);
+  const box=document.getElementById('q'); if(box&&q){ box.value=q; filterThreads(); }
+  if(wasThread&&THREADS.some(t=>t.thread===wasThread)) openThread(wasThread);
+  else if(wasSpecial){ const sp=SPECIALS.find(s=>s.ty===wasSpecial); if(sp) openSpecial(sp); }
 }
 
 /* ---------- top-bar menu ---------- */
 function toggleMenu(anchor){
   const ex=document.getElementById('appmenu'); if(ex){ ex.remove(); return; }
   const m=document.createElement('div'); m.className='menu'; m.id='appmenu';
+  m.setAttribute('role','menu');
   let items=`<button data-mi="add"><span class="ico">${ic('plus',15,2)}</span>Add a downloaded export</button>`;
   if(BRIDGE){
     items+=`<button data-mi="syncall"><span class="ico">${ic('refresh',15,1.9)}</span>Back up all accounts now</button>`
@@ -907,8 +932,12 @@ function toggleMenu(anchor){
     else if(a==='reveal'&&BRIDGE) BRIDGE.revealDataFolder();
     else if(a==='kit'&&BRIDGE) BRIDGE.showRecoveryKit();
   }));
+  const onKey=(e)=>{ if(e.key==='Escape'){ m.remove(); document.removeEventListener('keydown',onKey); anchor.focus(); } };
+  document.addEventListener('keydown',onKey);
   setTimeout(()=>document.addEventListener('click',function h(e){
-    if(!m.contains(e.target)&&e.target!==anchor){ m.remove(); document.removeEventListener('click',h); }
+    if(!m.contains(e.target)&&e.target!==anchor){
+      m.remove(); document.removeEventListener('click',h); document.removeEventListener('keydown',onKey);
+    }
   },{once:false}),0);
 }
 
@@ -936,8 +965,8 @@ function renderRail(){
     +(needs?`<span class="dot" style="background:var(--warn)"></span>`:'')+`</button>`;
   if(STATUS.connectors.length) h+=`<div class="sec">Platforms</div>`;
   STATUS.connectors.forEach((c,i)=>{
-    const col=c.stale?'var(--warn)':(c.last_status==='error'?'var(--bad)':'var(--good)');
-    h+=`<button class="nav-item ${active===c.connector?'active':''}" data-nav="conn" data-i="${i}" title="${escA(c.connector)}">`
+    const col=c.last_status==='error'?'var(--bad)':(c.stale?'var(--warn)':'var(--good)');
+    h+=`<button class="nav-item ${active===c.connector?'active':''}" data-nav="conn" data-i="${i}" title="${escA(c.connector)}" aria-current="${active===c.connector?'page':'false'}">`
       +`<span class="ico">${tile(c.connector)}</span><span class="nm">${esc(c.connector)}</span>`
       +`<span class="dot" style="background:${col}"></span><span class="ct">${fmtCompact(c.records)}</span></button>`;
   });
@@ -1100,8 +1129,8 @@ function showDashboard(){
       +statTile(s.total_bytes_h,'On disk','drive')
       +`</div><div class="seclabel">Platforms</div><div class="cards">`;
     body+=s.connectors.map((c,i)=>{
-      const col=c.stale?'var(--warn)':(c.last_status==='error'?'var(--bad)':'var(--good)');
-      const st=c.last_status===null?'Never run':(c.stale?'Stale':(c.last_status==='error'?'Error':'Up to date'));
+      const col=c.last_status==='error'?'var(--bad)':(c.stale?'var(--warn)':'var(--good)');
+      const st=c.last_status==='error'?'Last backup failed':(c.last_status===null?'Never run':(c.stale?'Stale':'Up to date'));
       const when=c.last_run_at?' · '+dayLabel(dayKey(c.last_run_at)):'';
       return `<button class="pcard" data-i="${i}">
         <div class="h">${tile(c.connector,'lg')}<span class="pname">${esc(c.connector)}</span><span class="dot" style="background:${col}"></span></div>
@@ -1126,6 +1155,7 @@ function showDashboard(){
 
 /* ---------- platform view ---------- */
 async function openConnector(id){
+  const my=++REQ;
   active=id; activeThread=null; activeSpecial=null; onConnect=false; renderRail();
   document.getElementById('app').classList.remove('mode-dash');
   const list=document.getElementById('list'); list.hidden=false;
@@ -1136,8 +1166,16 @@ async function openConnector(id){
   document.getElementById('pane').innerHTML=`<div class="msgs"><div class="msgstream">${skMsgs()}</div></div>`;
   let data;
   try{ data=await (await fetch('/api/threads?connector='+encodeURIComponent(id))).json(); }
-  catch(e){ if(active===id) document.getElementById('pane').innerHTML=emptyState('box','Could not load this platform','The local server did not respond.'); return; }
-  if(active!==id) return;
+  catch(e){
+    if(my!==REQ) return;
+    document.getElementById('pane').innerHTML=emptyState('box','Could not load this platform','The local server did not respond.');
+    // The list must not be left shimmering as if it were still loading.
+    const rows=document.getElementById('rows');
+    if(rows) rows.innerHTML=emptyState('box','Could not load','Nothing to show for this platform right now.');
+    const hs=document.getElementById('hsub'); if(hs) hs.textContent='';
+    return;
+  }
+  if(my!==REQ) return;
   SELF=data.self; THREADS=data.threads||[];
   SPECIALS=[];
   const tc=data.type_counts||{};
@@ -1183,7 +1221,7 @@ function renderThreadRows(threads){
       const yours=t.last_author&&t.last_author===SELF;
       h+=`<button class="row ${activeThread===t.thread?'active':''}" data-kind="thread" data-i="${i}">
         <span class="av" style="background:${avColor(t.thread)}">${initial(t.thread)}</span>
-        <span class="mid"><span class="t"><span class="nm">${esc(t.thread)}</span><span class="tm">${fmtShort(t.last_at)}</span></span>
+        <span class="mid"><span class="t"><span class="nm" dir="auto">${esc(t.thread)}</span><span class="tm">${fmtShort(t.last_at)}</span></span>
         <span class="pv">${yours?'<b>You:</b> ':''}${t.last_text?esc(t.last_text.slice(0,80)):'<i style="opacity:.75">Photo</i>'}</span></span></button>`;
     });
   }else if(THREADS.length){
@@ -1202,6 +1240,7 @@ function renderThreadRows(threads){
 
 /* ---------- transcript ---------- */
 async function openThread(thread){
+  const my=++REQ, conn=active;
   activeThread=thread; activeSpecial=null; renderThreadRows(THREADS.filter(matchFilter));
   const pane=document.getElementById('pane');
   pane.innerHTML=`<div class="top"><span class="av lg" style="background:${avColor(thread)}">${initial(thread)}</span>
@@ -1209,8 +1248,8 @@ async function openThread(thread){
     <div class="msgs"><div class="msgstream">${skMsgs()}</div></div>`;
   let msgs;
   try{ msgs=await (await fetch(`/api/thread?connector=${encodeURIComponent(active)}&thread=${encodeURIComponent(thread)}`)).json(); }
-  catch(e){ if(activeThread===thread) pane.innerHTML=emptyState('box','Could not load this conversation','The local server did not respond.'); return; }
-  if(activeThread!==thread) return;
+  catch(e){ if(my===REQ) pane.innerHTML=emptyState('box','Could not load this conversation','The local server did not respond.'); return; }
+  if(my!==REQ||conn!==active) return;
   let day='', prev=null, body='';
   for(const m of msgs){
     const k=dayKey(m.created_at);
@@ -1220,9 +1259,9 @@ async function openThread(thread){
     const att=mediaList(m);
     body+=`<div class="msg${me?' me':''}${cont?' cont':''}">`
       +((me||cont)?'':`<span class="mav" style="background:${avColor(m.author)}">${initial(m.author)}</span>`)
-      +`<div class="bubble">${(me||cont)?'':`<div class="who" style="color:${avColor(m.author)}">${esc(m.author)}</div>`}`
+      +`<div class="bubble">${(me||cont||!m.author)?'':`<div class="who" style="color:${avColor(m.author)}" dir="auto">${esc(m.author)}</div>`}`
       +(att.length?attachments(att):'')
-      +(m.text?`<div class="tx">${esc(m.text)}</div>`:'')
+      +(m.text?`<div class="tx" dir="auto">${esc(m.text)}</div>`:(att.length?'':`<div class="tx" style="color:var(--text-3)">(no content)</div>`))
       +`<div class="tm">${fmtTime(m.created_at)}</div></div></div>`;
     prev=m.author;
   }
@@ -1230,12 +1269,14 @@ async function openThread(thread){
     <div class="top"><span class="av lg" style="background:${avColor(thread)}">${initial(thread)}</span>
       <div><div class="nm">${esc(thread)}</div>
       <div class="sub">${msgs.length.toLocaleString()} ${msgs.length===1?'message':'messages'} · archived from ${esc(active)}</div></div></div>
-    <div class="msgs" id="msgs"><div class="msgstream">${body||emptyState('chat','No messages','This conversation has no text messages in the archive.')}</div></div>`;
+    <div class="msgs" id="msgs" tabindex="0" role="region" aria-label="Conversation">
+      <div class="msgstream">${body||emptyState('chat','No messages','This conversation has no text messages in the archive.')}</div></div>`;
   const box=document.getElementById('msgs'); if(box) box.scrollTop=box.scrollHeight;
 }
 
 /* ---------- collections (followers / following / posts / saved) ---------- */
 async function openSpecial(sp){
+  const my=++REQ, conn=active;
   activeThread=null; activeSpecial=sp.ty; renderThreadRows(THREADS.filter(matchFilter));
   const pane=document.getElementById('pane');
   const isMedia=sp.ty==='__media';
@@ -1247,8 +1288,8 @@ async function openSpecial(sp){
     ? `/api/records?connector=${encodeURIComponent(active)}&limit=4000`
     : `/api/records?connector=${encodeURIComponent(active)}&type=${encodeURIComponent(sp.ty)}&limit=1000`;
   try{ rows=await (await fetch(url)).json(); }
-  catch(e){ if(activeSpecial===sp.ty) pane.innerHTML=emptyState('box','Could not load '+sp.label.toLowerCase(),'The local server did not respond.'); return; }
-  if(activeSpecial!==sp.ty) return;
+  catch(e){ if(my===REQ) pane.innerHTML=emptyState('box','Could not load '+sp.label.toLowerCase(),'The local server did not respond.'); return; }
+  if(my!==REQ||conn!==active) return;
 
   if(isMedia){
     // One flat, chronological wall of everything with an attachment.

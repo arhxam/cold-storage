@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
-from .base import load_json
+from .base import load_json, stable_uid
 
 _MEDIA_KEYS = {
     "photos": "image",
@@ -52,11 +51,16 @@ def _sec_to_iso(sec: int | None) -> str | None:
         return None
 
 
-def _msg_uid(thread: str, ms: int | None, sender: str | None, content: str | None) -> str:
-    h = hashlib.sha1(
-        f"{thread}|{ms}|{sender}|{content}".encode("utf-8", "replace")
-    ).hexdigest()[:20]
-    return f"msg:{h}"
+def _msg_uid(
+    thread: str,
+    ms: int | None,
+    sender: str | None,
+    content: str | None,
+    uris: str = "",
+    *,
+    seen: dict[str, int] | None = None,
+) -> str:
+    return stable_uid("msg", thread, ms, sender, content, uris or None, seen=seen)
 
 
 def parse_message_threads(root: Path, connector: str) -> Iterator[Batch]:
@@ -78,13 +82,24 @@ def parse_message_threads(root: Path, connector: str) -> Iterator[Batch]:
         title = data.get("title")
         records: list[NormalizedRecord] = []
         media: list[MediaRef] = []
+        seen: dict[str, int] = {}
         for msg in data.get("messages", []):
             if not isinstance(msg, dict):
                 continue
             ms = msg.get("timestamp_ms")
             sender = msg.get("sender_name")
             content = msg.get("content")
-            uid = _msg_uid(thread, ms, sender, content)
+            # Three photos sent in the same second share a timestamp and have
+            # no text, so hashing only (thread, ms, sender, content) collapsed
+            # them into one message and hung every photo off it. The attachment
+            # uris tell them apart; `seen` handles anything still identical.
+            uris = ",".join(
+                str(item.get("uri"))
+                for key in _MEDIA_KEYS
+                for item in (msg.get(key) or [])
+                if isinstance(item, dict) and item.get("uri")
+            )
+            uid = _msg_uid(thread, ms, sender, content, uris, seen=seen)
             rec = NormalizedRecord(
                 connector=connector,
                 type=RecordType.MESSAGE,

@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
-from .base import Connector, load_json, register
+from .base import Connector, load_json, register, stable_uid
 
 _MARKERS = ("chat_history.json", "memories_history.json")
 
@@ -53,10 +53,11 @@ class SnapchatConnector(Connector):
         # Two known shapes, handled identically: either the keys are
         # conversation partners, or buckets like "Received Saved Chats" whose
         # items carry a "Conversation Title" (or From/To) instead.
+        seen: dict[str, int] = {}
         for key, items in data.items():
             if not isinstance(items, list):
                 continue
-            for i, item in enumerate(items):
+            for item in items:
                 if not isinstance(item, dict):
                     continue
                 author = item.get("From")
@@ -66,11 +67,22 @@ class SnapchatConnector(Connector):
                 text = item.get("Content")
                 if text is None:
                     text = item.get("Text")
+                # Snapchat prepends new messages, so a list index meant the
+                # newest message landed on an existing uid and was dropped
+                # while every older one was stored again as a duplicate.
                 records.append(
                     NormalizedRecord(
                         connector=self.id,
                         type=RecordType.MESSAGE,
-                        uid=f"chat:{key}:{i}",
+                        uid=stable_uid(
+                            "chat",
+                            key,
+                            item.get("Created"),
+                            author,
+                            text,
+                            item.get("Media IDs"),
+                            seen=seen,
+                        ),
                         created_at=_normalize_ts(item.get("Created")),
                         text=text,
                         author=author,
@@ -97,11 +109,14 @@ class SnapchatConnector(Connector):
         records: list[NormalizedRecord] = []
         media: list[MediaRef] = []
         items = data.get("Saved Media", []) if isinstance(data, dict) else []
-        for i, item in enumerate(items):
+        seen: dict[str, int] = {}
+        for item in items:
             if not isinstance(item, dict):
                 continue
             media_type = str(item.get("Media Type", ""))
-            uid = f"memory:{item.get('Date')}:{i}"
+            uid = stable_uid(
+                "memory", item.get("Date"), media_type, item.get("Download Link"), seen=seen
+            )
             records.append(
                 NormalizedRecord(
                     connector=self.id,
@@ -126,7 +141,8 @@ class SnapchatConnector(Connector):
         data = load_json(friends_file)
         records: list[NormalizedRecord] = []
         items = data.get("Friends", []) if isinstance(data, dict) else []
-        for i, item in enumerate(items):
+        seen: dict[str, int] = {}
+        for item in items:
             if not isinstance(item, dict):
                 continue
             username = item.get("Username")
@@ -135,7 +151,7 @@ class SnapchatConnector(Connector):
                 NormalizedRecord(
                     connector=self.id,
                     type=RecordType.FOLLOWER,
-                    uid=f"friend:{username or i}",
+                    uid=stable_uid("friend", username or display_name, seen=seen),
                     text=username,
                     extra={"display_name": display_name} if display_name else {},
                 )
