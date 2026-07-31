@@ -569,7 +569,15 @@ def doctor() -> None:
     checks.append(("initialized", layout.exists(), str(layout.home)))
     if layout.exists():
         cfg = Config.load(layout)
-        checks.append(("encryption on", cfg.encrypt, "AES-256 at rest" if cfg.encrypt else "OFF"))
+        checks.append(
+            (
+                "media encryption",
+                cfg.encrypt,
+                # Precise on purpose: the index and manifests are not encrypted,
+                # and a tool people pick for privacy must not imply otherwise.
+                "AES-256 (photos/video; index is not encrypted)" if cfg.encrypt else "OFF",
+            )
+        )
         checks.append(
             ("keyfile present", KeyManager(layout.keys_dir).exists(), str(layout.keys_dir))
         )
