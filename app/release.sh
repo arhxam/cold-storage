@@ -31,8 +31,32 @@ export SYT_SIGN_IDENTITY="$IDENTITY"
 # Application:" prefix — it wants just the common name.
 export CSC_NAME="${IDENTITY#Developer ID Application: }"
 
-echo "→ building…"
-npm run dist
+APP="release/mac-arm64/Save Your Shit.app"
+
+# Two passes on purpose.
+#
+# The app has to be notarized and STAPLED before the disk image is built, so
+# that the copy the user drags to /Applications carries its own ticket. Staple
+# only the DMG and that ticket is left behind with the disk image: the app's
+# first launch then needs a round-trip to Apple, and on a machine that is
+# offline (or behind a captive portal) it is refused.
+echo "→ building the app…"
+npm run dist -- --dir
+
+echo "→ notarizing the app (this can take a few minutes)…"
+APPZIP="release/app-for-notarization.zip"
+rm -f "$APPZIP"
+/usr/bin/ditto -c -k --keepParent "$APP" "$APPZIP"
+xcrun notarytool submit "$APPZIP" --keychain-profile "$PROFILE" --wait
+rm -f "$APPZIP"
+
+echo "→ stapling the app…"
+xcrun stapler staple "$APP"
+xcrun stapler validate "$APP"
+
+# Now package the already-stapled app into a disk image.
+echo "→ building the disk image…"
+npm run dist -- --prepackaged "$APP"
 
 DMG=$(ls -t release/*.dmg | head -1)
 echo "→ built: $DMG"
@@ -42,16 +66,14 @@ echo "→ built: $DMG"
 echo "→ signing the disk image…"
 codesign --force --timestamp --sign "$IDENTITY" "$DMG"
 
-echo "→ notarizing (this can take a few minutes)…"
+echo "→ notarizing the disk image…"
 xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
 
-echo "→ stapling…"
+echo "→ stapling the disk image…"
 xcrun stapler staple "$DMG"
 xcrun stapler validate "$DMG"
 
 echo "→ verifying Gatekeeper acceptance…"
-APP="release/mac-arm64/Save Your Shit.app"
-xcrun stapler staple "$APP" || true
 spctl --assess --type execute --verbose=2 "$APP"
 
 echo

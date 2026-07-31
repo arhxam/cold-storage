@@ -517,11 +517,22 @@ function onQueueEvent(ev) {
       path: ev.path,
     });
   } else if (ev.phase === "error") {
-    sendRenderer("syt:ingest", { phase: "error", error: ev.error, path: ev.path });
+    if (ev.permanent) permanentFailures.add(ev.path);
+    sendRenderer("syt:ingest", {
+      phase: "error",
+      error: ev.error,
+      path: ev.path,
+      permanent: !!ev.permanent,
+      name: path.basename(ev.path),
+    });
     // No window to see the toast? Say it where the user will notice, without
-    // a modal that would freeze an unattended app.
+    // a modal that would freeze an unattended app. For a permanent failure the
+    // reason IS the message — "re-download choosing JSON" is the whole fix.
     if (!mainWindow || mainWindow.isDestroyed()) {
-      notify("Backup failed", `${path.basename(ev.path)} could not be backed up.`);
+      notify(
+        ev.permanent ? `Can't read ${path.basename(ev.path)}` : "Backup failed",
+        ev.permanent ? ev.error : `${path.basename(ev.path)} could not be backed up.`
+      );
     }
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle("Save Your Shit");
   }
@@ -667,6 +678,9 @@ const EXPORT_RE =
   /(instagram|facebook|twitter|^x-|discord|telegram|whatsapp|reddit|snapchat|linkedin|slack|takeout|your[-_]?data|data[-_]?export)/i;
 let downloadsWatcher = null;
 const pendingDownloads = new Map(); // name -> timer (debounce; bounded by dir size)
+// Files the engine says it can never read (e.g. an HTML export where JSON was
+// needed). Retrying them on every launch would be pure noise.
+const permanentFailures = new Set();
 
 function watchDownloads() {
   const dir = path.join(os.homedir(), "Downloads");
@@ -731,7 +745,9 @@ function watchDownloads() {
       ingestPath(full, { cleanup: false })
         .then((ok) => {
           inFlight.delete(name);
-          if (ok) remember(name);
+          // Remember it if it worked — or if it can never work. Re-scanning an
+          // unreadable file on every single launch helps nobody.
+          if (ok || permanentFailures.has(full)) remember(name);
         })
         .catch(() => inFlight.delete(name));
     };

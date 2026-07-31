@@ -74,15 +74,41 @@ def check_export(source: Path, *, connector_id: str | None = None) -> CheckResul
         )
 
 
-def _no_match_warnings(path: Path) -> list[str]:
-    warnings = ["This export was not recognized by any connector."]
-    # Common cause: the user exported HTML instead of JSON.
-    if list(path.glob("**/message_*.html")) or list(path.glob("**/*.html")):
-        warnings.append(
+def unrecognized_reasons(path: Path) -> list[str]:
+    """Why an export wasn't recognized, in words a user can act on.
+
+    Shared by `syt check` and `syt ingest` so both explain it identically. Takes
+    a .zip or a folder; a zip is inspected by name so nothing is unpacked.
+    """
+    path = Path(path)
+    reasons = ["This export was not recognized by any connector."]
+    html = False
+    if path.is_dir():
+        html = bool(list(path.glob("**/message_*.html")) or list(path.glob("**/*.html")))
+    elif path.suffix.lower() == ".zip":
+        import zipfile
+
+        try:
+            with zipfile.ZipFile(path) as zf:
+                html = any(n.lower().endswith(".html") for n in zf.namelist()[:5000])
+        except (zipfile.BadZipFile, OSError):
+            reasons.append("The .zip could not be opened — it may be corrupt or still downloading.")
+            return reasons
+    if html:
+        reasons.append(
             "It looks like an HTML export — re-download choosing JSON format, "
             "which is what this tool reads."
         )
-    return warnings
+    else:
+        reasons.append(
+            "If you know the platform, pass --connector to force it "
+            "(see `syt connectors` for the list)."
+        )
+    return reasons
+
+
+def _no_match_warnings(path: Path) -> list[str]:
+    return unrecognized_reasons(path)
 
 
 def _coverage_warnings(connector: Connector, counts: Counter[str]) -> list[str]:
