@@ -34,6 +34,24 @@ console = Console()
 err = Console(stderr=True)
 
 
+#: Machine-readable marker on the "I can't read this export" failure. The app
+#: keys off it to stop retrying — re-reading the same unreadable file cannot
+#: start working, so it is a permanent failure, not a transient one.
+UNRECOGNIZED_MARKER = "SYT_UNRECOGNIZED_EXPORT"
+
+
+def _fail_unrecognized(path: Path, exc: Exception) -> None:
+    """Explain an unrecognized export the way `syt check` does, then exit."""
+    from .preflight import unrecognized_reasons
+
+    err.print(f"[red]✗[/] Could not read this export: [bold]{path.name}[/]")
+    for reason in unrecognized_reasons(path):
+        err.print(f"  • {reason}")
+    err.print(f"\n[dim]Run `syt check {path}` for a full report.[/]")
+    err.print(f"[dim]{UNRECOGNIZED_MARKER}: {exc}[/]")
+    raise typer.Exit(2)
+
+
 def _fail(msg: str, code: int = 1) -> None:
     err.print(f"[bold red]error:[/] {msg}")
     raise typer.Exit(code)
@@ -150,7 +168,15 @@ def ingest(
         return
 
     with rt.open_archive() as archive, console.status(f"Ingesting {path.name}…"):
-        result = Engine(archive).ingest(path, connector_id=connector, keep_snapshot=keep_snapshot)
+        try:
+            result = Engine(archive).ingest(
+                path, connector_id=connector, keep_snapshot=keep_snapshot
+            )
+        except ValueError as exc:
+            # "I don't recognize this" is a normal thing for a user to hit — the
+            # usual cause is an HTML export instead of JSON. Say what to do
+            # about it instead of printing a traceback.
+            _fail_unrecognized(path, exc)
     if result.status == "error":
         err.print(f"[yellow]partial ingest:[/] {result.error}")
     console.print(

@@ -124,6 +124,63 @@ const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "syt-test-"));
     assert.ok(events.includes("error"), "reported a final error");
   });
 
+  await t("an unreadable export fails once, with the reason, and is NOT retried", async () => {
+    // Found in real testing: an Instagram HTML export (JSON was needed). The
+    // engine can never read it, so retrying four times per launch is waste —
+    // and it buries the one sentence that tells the user what to do.
+    const d = tmp();
+    const store = new Store(d);
+    const f = path.join(d, "instagram-html-export.zip");
+    fs.writeFileSync(f, "x");
+    let calls = 0;
+    const events = [];
+    const q = new IngestQueue(
+      store,
+      async () => {
+        calls++;
+        return {
+          ok: false,
+          stdout: "",
+          stderr:
+            "✗ Could not read this export: instagram-html-export.zip\n" +
+            "  • This export was not recognized by any connector.\n" +
+            "  • It looks like an HTML export — re-download choosing JSON format, " +
+            "which is what this tool reads.\n" +
+            "SYT_UNRECOGNIZED_EXPORT: could not recognize this export.",
+        };
+      },
+      (e) => events.push(e)
+    );
+    const ok = await q.add(f, { cleanup: false });
+    assert.equal(ok, false);
+    assert.equal(calls, 1, `tried exactly once (was ${calls})`);
+    const err = events.find((e) => e.phase === "error");
+    assert.ok(err && err.permanent === true, "reported as a permanent failure");
+    assert.match(err.error, /re-download choosing JSON/, "surfaces the actionable sentence");
+    assert.ok(fs.existsSync(f), "the user's file is left alone");
+    assert.equal(store.load().queue.length, 0, "removed from the queue");
+  });
+
+  await t("a transient failure is still retried", async () => {
+    const d = tmp();
+    const store = new Store(d);
+    const f = path.join(d, "ok-later.zip");
+    fs.writeFileSync(f, "x");
+    let calls = 0;
+    const q = new IngestQueue(
+      store,
+      async () => {
+        calls++;
+        return calls < 3
+          ? { ok: false, stderr: "database is locked" }
+          : { ok: true, stdout: "Backed up 9 items" };
+      },
+      () => {}
+    );
+    assert.equal(await q.add(f), true, "eventually succeeded");
+    assert.equal(calls, 3, "retried until it worked");
+  });
+
   await t("a successful ingest deletes only files we created", async () => {
     const d = tmp();
     const store = new Store(d);

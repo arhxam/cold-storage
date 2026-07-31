@@ -640,9 +640,13 @@ function handleIngest(p){
   }else if(p.phase==='done'){
     updateToast(ingestToast,'good','Backup complete',esc(p.summary||'Done.'),{ms:5000});
     ingestToast=null; refreshData();
+  }else if(p.phase==='retry'){
+    updateToast(ingestToast,'work','Retrying…',esc((p.error||'').split('\n').filter(Boolean).pop()||''),{sticky:true});
   }else if(p.phase==='error'){
     const last=(p.error||'').split('\n').filter(Boolean).pop()||'Something went wrong.';
-    updateToast(ingestToast,'bad','Backup failed',esc(last),{ms:9000});
+    // A file we can never read is not a failure to retry — it's an instruction.
+    if(p.permanent) updateToast(ingestToast,'bad','Can’t read '+esc(p.name||'that file'),esc(last),{ms:14000});
+    else updateToast(ingestToast,'bad','Backup failed',esc(last),{ms:9000});
     ingestToast=null;
   }
 }

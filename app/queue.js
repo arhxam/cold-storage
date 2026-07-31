@@ -14,6 +14,31 @@
 const fs = require("fs");
 
 const MAX_ATTEMPTS = 4;
+
+// Some failures cannot improve by trying again: the file is not an export we
+// can read (the usual cause is an HTML export where JSON was needed). Retrying
+// those four times per launch, forever, wastes work and buries the one message
+// that would actually help the user. The engine tags them for us.
+const PERMANENT = [
+  "SYT_UNRECOGNIZED_EXPORT",
+  "could not recognize this export",
+  "not recognized by any connector",
+  "could not be opened — it may be corrupt",
+];
+function isPermanent(text) {
+  const t = String(text || "").toLowerCase();
+  return PERMANENT.some((m) => t.includes(m.toLowerCase()));
+}
+
+/** Pull the sentence worth showing a user out of the engine's output. */
+function friendlyReason(text) {
+  const lines = String(text || "")
+    .split("\n")
+    .map((l) => l.replace(/^\s*[•✗]\s*/, "").trim())
+    .filter(Boolean);
+  const hint = lines.find((l) => /re-download|--connector|corrupt/i.test(l));
+  return hint || lines[lines.length - 1] || "unknown error";
+}
 // Big archives are slow; this is a backstop against a wedged child, not a
 // perf budget. Instagram/Google exports can legitimately take many minutes.
 const INGEST_TIMEOUT_MS = 90 * 60 * 1000;
@@ -168,10 +193,10 @@ class IngestQueue {
           continue;
         }
 
-        const detail =
-          (String((res && res.stderr) || (res && res.stdout) || "").trim().slice(-500)) ||
-          "unknown error";
-        if (entry.attempts >= MAX_ATTEMPTS) {
+        const raw = String((res && res.stderr) || "") + "\n" + String((res && res.stdout) || "");
+        const permanent = isPermanent(raw);
+        const detail = permanent ? friendlyReason(raw) : raw.trim().slice(-500) || "unknown error";
+        if (permanent || entry.attempts >= MAX_ATTEMPTS) {
           q.shift();
           this.store.save();
           this.store.flush();
@@ -183,6 +208,7 @@ class IngestQueue {
             platform: entry.platform,
             error: detail,
             final: true,
+            permanent,
           });
           this._settle(entry.path, false);
           continue;

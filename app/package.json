@@ -1,7 +1,7 @@
 {
   "name": "save-your-shit",
   "productName": "Save Your Shit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first backup for your own social-media data. No server.",
   "main": "main.js",
   "license": "MIT",

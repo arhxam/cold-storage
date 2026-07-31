@@ -12,7 +12,7 @@ Discord, Telegram, WhatsApp and Slack by hand.
 
 <a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-09090b?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac"></a>
 
-<sub>Signed and notarized by Apple — open the DMG, drag to Applications. No Terminal needed.</sub>
+<sub>Apple Silicon · signed and notarized by Apple — open the DMG, drag to Applications.<br>No Terminal, no right-click workaround, no Gatekeeper warning.</sub>
 
 </div>
 
@@ -157,7 +157,9 @@ uv run ruff check src tests    # lint
 cd app && npm install
 npm test                       # automation + reliability tests
 npm start                      # run the desktop app
-npm run dist                   # build a DMG
+npm run dist                   # build an unsigned DMG
+./release.sh                   # build, sign and notarize (needs a Developer ID)
+./verify-dmg.sh                # check a built DMG the way a downloader's Mac will
 ```
 
 Building the Mac app bundles a frozen copy of the engine — rebuild it with
