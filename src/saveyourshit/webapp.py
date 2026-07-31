@@ -138,35 +138,37 @@ INDEX_HTML = r"""<!doctype html>
 <title>Save Your Shit</title>
 <style>
   /* ------------------------------------------------------------------ */
-  /* Design tokens — neutral dark theme with a cobalt-blue brand         */
+  /* Design tokens — shadcn/ui "zinc dark". Flat, minimal, high contrast. */
   /* ------------------------------------------------------------------ */
   :root{
-    --bg:#100f0d;            /* app background            */
-    --rail:#151311;          /* left rail surface         */
-    --panel:#191815;         /* cards, list column        */
-    --panel-2:#201e1a;       /* raised surface            */
-    --hover:#242220;         /* hover wash                */
-    --active:#2b2824;        /* selected wash             */
-    --line:#262421;          /* hairline borders          */
-    --line-2:#36322b;        /* stronger borders          */
-    --text:#ece7df;          /* primary text              */
-    --text-2:#a69f92;        /* secondary text            */
-    --text-3:#7b7468;        /* tertiary / meta text      */
-    --brand:#2563eb;         /* primary brand blue        */
-    --brand-strong:#1d4ed8;  /* pressed / lower gradient  */
-    --accent:var(--brand);
-    --accent-soft:rgba(37,99,235,.18);
-    --good:#82c98f; --warn:#d9b355; --bad:#d97862;
-    --bubble-them:#232019;
-    --bubble-them-line:#322e26;
-    --bubble-me:linear-gradient(180deg,#3b82f6,var(--brand-strong));
-    --bubble-me-text:#fff;
-    --shadow-card:0 8px 22px rgba(0,0,0,.35);
-    --r-sm:8px; --r-md:11px; --r-lg:14px;
+    --bg:#09090b;            /* background      (zinc-950) */
+    --rail:#09090b;          /* left rail surface          */
+    --panel:#18181b;         /* card            (zinc-900) */
+    --panel-2:#27272a;       /* muted / raised  (zinc-800) */
+    --hover:#1c1c1f;         /* hover wash                 */
+    --active:#27272a;        /* selected wash              */
+    --line:#27272a;          /* border          (zinc-800) */
+    --line-2:#3f3f46;        /* stronger border (zinc-700) */
+    --text:#fafafa;          /* foreground      (zinc-50)  */
+    --text-2:#a1a1aa;        /* muted-fg        (zinc-400) */
+    --text-3:#71717a;        /* subtle          (zinc-500) */
+    --brand:#fafafa;         /* primary = near-white       */
+    --brand-strong:#e4e4e7;
+    --on-brand:#18181b;      /* text on the primary button */
+    --accent:#fafafa;
+    --accent-soft:rgba(250,250,250,.10);
+    --ring:#52525b;          /* focus ring      (zinc-600) */
+    --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    --bubble-them:#27272a;
+    --bubble-them-line:#3f3f46;
+    --bubble-me:#fafafa;
+    --bubble-me-text:#18181b;
+    --shadow-card:0 1px 3px rgba(0,0,0,.4);
+    --r-sm:6px; --r-md:8px; --r-lg:10px;
   }
   *{ box-sizing:border-box; }
   html,body{ height:100%; }
-  body{ margin:0; background:var(--bg); color:var(--text);
+  body{ margin:0; background:var(--bg); color:var(--text); display:flex; flex-direction:column;
         font:13.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
         -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   button{ font:inherit; color:inherit; background:none; border:0; padding:0; text-align:left; cursor:pointer; }
@@ -176,22 +178,132 @@ INDEX_HTML = r"""<!doctype html>
   ::-webkit-scrollbar-thumb{ background:#2e2b26; border-radius:8px; border:3px solid transparent; background-clip:content-box; }
   ::-webkit-scrollbar-thumb:hover{ background:#3a362f; border:3px solid transparent; background-clip:content-box; }
   ::-webkit-scrollbar-track{ background:transparent; }
-  ::selection{ background:rgba(217,160,91,.30); }
-  :focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; border-radius:var(--r-sm); }
+  ::selection{ background:rgba(250,250,250,.18); }
+  :focus-visible{ outline:2px solid var(--ring); outline-offset:2px; border-radius:var(--r-sm); }
 
-  .app{ display:grid; grid-template-columns:246px minmax(280px,330px) 1fr; height:100vh; }
+  .app{ display:grid; grid-template-columns:246px minmax(280px,330px) 1fr; flex:1; min-height:0; }
   .app.mode-dash{ grid-template-columns:246px 1fr; }
+
+  /* ------------------------------------------------------------------ */
+  /* Integrated title bar — draggable; hosts the macOS traffic lights    */
+  /* so the window controls read as part of the app, not a separate strip */
+  /* ------------------------------------------------------------------ */
+  .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px;
+             padding:0 12px 0 14px; background:var(--rail); border-bottom:1px solid var(--line);
+             -webkit-app-region:drag; user-select:none; }
+  body.electron .titlebar{ padding-left:82px; }  /* clear the traffic lights */
+  .titlebar .tb-brand{ display:flex; align-items:center; gap:9px; font-weight:650;
+                       font-size:13.5px; letter-spacing:-.01em; white-space:nowrap; }
+  .titlebar .tb-brand .mark{ width:22px; height:22px; border-radius:6px; flex:none; color:var(--on-brand);
+                             background:var(--brand); display:grid; place-items:center; }
+  .titlebar .sp{ flex:1; }
+  .tbtn{ -webkit-app-region:no-drag; display:inline-flex; align-items:center; gap:6px; height:30px;
+         padding:0 12px; border-radius:var(--r-md); font-size:12.5px; font-weight:500; color:var(--text);
+         border:1px solid var(--line); background:transparent;
+         transition:background-color .13s ease, border-color .13s ease, color .13s ease; }
+  .tbtn:hover{ background:var(--panel-2); }
+  .tbtn.primary{ color:var(--on-brand); border-color:transparent; background:var(--brand); font-weight:550; }
+  .tbtn.primary:hover{ background:var(--brand-strong); }
+  .tbtn.icon{ padding:0; width:30px; justify-content:center; border-color:transparent; color:var(--text-2); }
+  .tbtn.icon:hover{ color:var(--text); }
+  .tbtn:disabled{ opacity:.5; pointer-events:none; }
+
+  /* Popover menu (top-right ⋯) */
+  .menu{ position:fixed; z-index:60; min-width:214px; background:var(--panel-2); border:1px solid var(--line-2);
+         border-radius:11px; box-shadow:0 14px 40px rgba(0,0,0,.5); padding:6px; }
+  .menu button{ display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px;
+                border-radius:7px; font-size:12.5px; color:var(--text); }
+  .menu button:hover{ background:var(--hover); }
+  .menu button .ico{ color:var(--text-3); display:grid; place-items:center; }
+  .menu .sep{ height:1px; background:var(--line); margin:5px 4px; }
+
+  /* Toasts (in-app backup feedback) */
+  .toasts{ position:fixed; right:18px; bottom:18px; z-index:80; display:flex; flex-direction:column;
+           gap:10px; align-items:flex-end; }
+  .toast{ display:flex; align-items:flex-start; gap:11px; background:var(--panel-2); border:1px solid var(--line-2);
+          border-radius:12px; padding:12px 15px; box-shadow:0 14px 40px rgba(0,0,0,.5); max-width:380px;
+          animation:toastin .22s ease; }
+  @keyframes toastin{ from{ opacity:0; transform:translateY(8px); } }
+  .toast .ti{ width:26px; height:26px; border-radius:8px; flex:none; display:grid; place-items:center; margin-top:1px; }
+  .toast.good .ti{ color:var(--good); background:rgba(130,201,143,.12); }
+  .toast.bad .ti{ color:var(--bad); background:rgba(217,120,98,.12); }
+  .toast.work .ti{ color:var(--accent); background:var(--accent-soft); }
+  .toast .tt{ font-size:12.5px; color:var(--text); min-width:0; line-height:1.45; }
+  .toast .tt b{ font-weight:650; }
+  .toast .tsp{ width:15px; height:15px; border-radius:50%; border:2px solid var(--line-2);
+               border-top-color:var(--accent); animation:spin .8s linear infinite; }
+
+  /* ------------------------------------------------------------------ */
+  /* Accounts view — connect once, then it runs itself                   */
+  /* ------------------------------------------------------------------ */
+  .connect{ padding:34px 38px; overflow-y:auto; height:100%; }
+  .connectin{ max-width:940px; margin:0 auto; }
+
+  /* Card primitive (shadcn Card) */
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); }
+  .acct{ display:flex; align-items:center; gap:13px; padding:14px 16px; border-bottom:1px solid var(--line); }
+  .acct:last-child{ border-bottom:0; }
+  .acct .amid{ flex:1; min-width:0; }
+  .acct .an{ font-weight:550; font-size:13.5px; letter-spacing:-.01em; }
+  .acct .as{ font-size:11.5px; color:var(--text-3); margin-top:2px; display:flex; align-items:center; gap:6px; }
+  .acct .aacts{ display:flex; align-items:center; gap:8px; flex:none; }
+
+  /* Status pill (shadcn Badge) */
+  .pill{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:550; line-height:1.5;
+         padding:2px 8px; border-radius:999px; border:1px solid var(--line-2); color:var(--text-2); white-space:nowrap; }
+  .pill.ok{ color:var(--good); border-color:rgba(74,222,128,.3); background:rgba(74,222,128,.08); }
+  .pill.wait{ color:var(--warn); border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.08); }
+  .pill.err{ color:var(--bad); border-color:rgba(248,113,113,.3); background:rgba(248,113,113,.08); }
+  .pill .lamp{ width:5px; height:5px; border-radius:50%; background:currentColor; flex:none; }
+  .pill .lamp.pulse{ animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 50%{ opacity:.35; } }
+
+  /* Select (shadcn Select, native for reliability) */
+  .sel{ -webkit-appearance:none; appearance:none; height:30px; padding:0 26px 0 10px; border-radius:var(--r-md);
+        border:1px solid var(--line); background:transparent; color:var(--text); font:inherit; font-size:12px;
+        cursor:pointer; background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat:no-repeat; background-position:right 8px center; }
+  .sel:hover{ background-color:var(--panel-2); }
+
+  /* Switch (shadcn Switch) */
+  .sw{ width:34px; height:20px; border-radius:999px; background:var(--panel-2); border:1px solid var(--line-2);
+       position:relative; flex:none; transition:background-color .16s ease; cursor:pointer; }
+  .sw::after{ content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%;
+              background:var(--text-2); transition:transform .16s ease, background-color .16s ease; }
+  .sw.on{ background:var(--brand); border-color:var(--brand); }
+  .sw.on::after{ transform:translateX(14px); background:var(--on-brand); }
+
+  .pbtn{ height:30px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 12px;
+         border-radius:var(--r-md); font-size:12px; font-weight:500; border:1px solid var(--line); color:var(--text);
+         background:transparent; transition:background-color .13s ease, color .13s ease; white-space:nowrap; }
+  .pbtn:hover{ background:var(--panel-2); }
+  .pbtn.solid{ color:var(--on-brand); border-color:transparent; background:var(--brand); font-weight:550; }
+  .pbtn.solid:hover{ background:var(--brand-strong); }
+  .pbtn.ghost{ border-color:transparent; color:var(--text-3); }
+  .pbtn.ghost:hover{ color:var(--text); background:var(--panel-2); }
+  .pbtn:disabled{ opacity:.5; pointer-events:none; }
+  .pbtn .spin{ width:12px; height:12px; border-radius:50%; border:1.6px solid var(--line-2);
+               border-top-color:var(--text); animation:spin .8s linear infinite; }
+
+  /* Manual-only platforms */
+  .manual{ display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .manual:last-child{ border-bottom:0; }
+  .manual .mm{ flex:1; min-width:0; }
+  .manual .mn{ font-weight:500; font-size:13px; }
+  .manual .mr{ font-size:11.5px; color:var(--text-3); margin-top:1px; }
+
+  /* Hero row: add a file by hand */
+  .addrow{ display:flex; align-items:center; gap:13px; padding:14px 16px; width:100%; text-align:left; }
+  .addrow .ab-ic{ width:34px; height:34px; border-radius:var(--r-md); flex:none; color:var(--text-2);
+                  background:var(--panel-2); display:grid; place-items:center; }
+  .addrow .ab-t{ font-weight:550; font-size:13px; display:block; }
+  .addrow .ab-s{ font-size:11.5px; color:var(--text-3); margin-top:2px; display:block; }
+  .addrow .ab-s code{ color:var(--text-2); }
 
   /* ------------------------------------------------------------------ */
   /* Left rail                                                           */
   /* ------------------------------------------------------------------ */
   .rail{ background:var(--rail); border-right:1px solid var(--line); padding:16px 12px; overflow-y:auto; overflow-x:hidden; }
-  .brand{ display:flex; align-items:center; gap:10px; font-weight:650; font-size:14px;
-          letter-spacing:-.01em; padding:2px 8px 18px; white-space:nowrap; }
-  .brand .mark{ width:28px; height:28px; border-radius:9px; flex:none; color:#fff;
-                background:linear-gradient(160deg,#3b82f6,var(--brand-strong));
-                box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
-                display:grid; place-items:center; }
   .nav-item{ display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px;
              border-radius:var(--r-sm); margin-bottom:2px; font-size:13px; color:var(--text-2);
              transition:background-color .13s ease,color .13s ease; }
@@ -289,8 +401,8 @@ INDEX_HTML = r"""<!doctype html>
          font-size:12.5px; margin-bottom:26px; }
   .badge{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600;
           padding:3px 10px; border-radius:20px; border:1px solid; line-height:1.4; }
-  .badge.good{ color:var(--good); border-color:rgba(130,201,143,.32); background:rgba(130,201,143,.08); }
-  .badge.warn{ color:var(--warn); border-color:rgba(217,179,85,.32); background:rgba(217,179,85,.08); }
+  .badge.good{ color:var(--good); border-color:rgba(74,222,128,.3); background:rgba(74,222,128,.08); }
+  .badge.warn{ color:var(--warn); border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.08); }
   code.path{ background:var(--panel); border:1px solid var(--line); padding:2px 8px; border-radius:6px; color:var(--text-2); }
   .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:30px; }
   .stat{ background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg);
@@ -364,25 +476,30 @@ INDEX_HTML = r"""<!doctype html>
     .app{ grid-template-columns:64px minmax(230px,270px) 1fr; }
     .app.mode-dash{ grid-template-columns:64px 1fr; }
     .rail{ padding:14px 9px; }
-    .brand{ justify-content:center; padding:2px 0 16px; }
-    .brand .bt{ display:none; }
+    .titlebar .tb-brand .bt{ display:none; }
     .nav-item{ justify-content:center; padding:9px 0; }
     .nav-item .nm,.nav-item .ct,.nav-item .dot{ display:none; }
     .sec{ display:none; }
     .dash{ padding:26px 24px; }
+    .connect{ padding:26px 22px; }
     .msgs{ padding:10px 16px 24px; }
     .msg{ max-width:86%; }
   }
 </style>
 </head>
 <body>
+<div class="titlebar" id="titlebar">
+  <div class="tb-brand" aria-label="Save Your Shit"><span class="mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="bt">Save Your Shit</span></div>
+  <div class="sp"></div>
+  <button class="tbtn primary" id="tb-add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Connect account</button>
+  <button class="tbtn icon" id="tb-menu" aria-label="More"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
+</div>
 <div class="app mode-dash" id="app">
-  <nav class="rail" id="rail">
-    <div class="brand" aria-label="Save Your Shit"><span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="bt">Save Your Shit</span></div>
-  </nav>
+  <nav class="rail" id="rail"></nav>
   <section class="list" id="list" hidden></section>
   <main class="pane" id="pane"><div class="boot"><div class="spinner" role="status" aria-label="Loading"></div></div></main>
 </div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 <script>
 'use strict';
 /* ---------- constants ---------- */
@@ -404,7 +521,19 @@ const PATHS={
   image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-11 11"/>',
   drive:'<rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6.5 12h.01"/><path d="M10.5 12h7"/>',
   doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
-  bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'
+  bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  external:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  key:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2"/><path d="M16 7l3 3"/><path d="M18 5l3 3"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  /* lucide: refresh-cw, clock, alert-circle, plug-zap, download-cloud, settings */
+  refresh:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  alert:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
+  plug:'<path d="M6.3 20.7a2.4 2.4 0 0 1 0-3.4l3-3a2.4 2.4 0 0 1 3.4 0l1 1a2.4 2.4 0 0 1 0 3.4l-3 3a2.4 2.4 0 0 1-3.4 0z"/><path d="m14 8 2-2"/><path d="M17.7 3.3a2.4 2.4 0 0 1 3.4 3.4l-3 3a2.4 2.4 0 0 1-3.4 0l-1-1a2.4 2.4 0 0 1 0-3.4z"/><path d="m8 14-2 2"/>',
+  cloud:'<path d="M12 13v8"/><path d="m8 17 4 4 4-4"/><path d="M20.9 18.4A5 5 0 0 0 18 9h-1.3A8 8 0 1 0 4 16.2"/>',
+  cog:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H7a1.7 1.7 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V7a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
 };
 /* ---------- tiny helpers ---------- */
 function ic(n,s,w){s=s||16;w=w||2;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[n]||''}</svg>`;}
@@ -430,20 +559,133 @@ function skMsgs(){let h='';const w=[46,58,34,52,40,62];for(let i=0;i<6;i++)h+=`<
 /* ---------- state ---------- */
 let STATUS=null, active=null, activeThread=null, activeSpecial=null, SELF=null;
 let THREADS=[], SPECIALS=[], VIS=[];
+let onConnect=false;
+
+/* ---------- native bridge (present only inside the desktop app) ---------- */
+const BRIDGE=(typeof window!=='undefined' && window.sytBridge) ? window.sytBridge : null;
+
+/* Accounts state, pushed from the native side. In a plain browser this stays
+   empty and the UI falls back to "add a downloaded export by hand". */
+let ACCOUNTS=[], PREFS={launchAtLogin:false};
+const SCHEDULES=[['daily','Every day'],['weekly','Every week'],['monthly','Every month'],['manual','Only when I ask']];
+
+/* ---------- native actions + toasts ---------- */
+function openExternal(url){
+  if(!url) return;
+  if(BRIDGE&&BRIDGE.openExternal) BRIDGE.openExternal(url);
+  else window.open(url,'_blank','noopener');
+}
+function addExport(){
+  if(BRIDGE&&BRIDGE.addExport){ BRIDGE.addExport(); }
+  else toast('work','Add from the terminal','Run <code>syt ingest ~/Downloads/your-export.zip</code>, then this page updates automatically.',{ms:7000});
+}
+let TSEQ=0, ingestToast=null;
+function toastMarkup(kind,title,body){
+  const icon = kind==='work' ? '<span class="tsp"></span>'
+    : ic(kind==='good'?'check':(kind==='bad'?'box':'box'),15,2.2);
+  return `<span class="ti">${icon}</span><span class="tt"><b>${esc(title)}</b>${body?'<br>'+body:''}</span>`;
+}
+function toast(kind,title,body,opts){
+  opts=opts||{};
+  const wrap=document.getElementById('toasts'); if(!wrap) return null;
+  const id='t'+(++TSEQ);
+  const el=document.createElement('div'); el.className='toast '+kind; el.id=id;
+  el.innerHTML=toastMarkup(kind,title,body); wrap.appendChild(el);
+  if(!opts.sticky) setTimeout(()=>dismissToast(id),opts.ms||4200);
+  return id;
+}
+function updateToast(id,kind,title,body,opts){
+  opts=opts||{};
+  const el=id&&document.getElementById(id);
+  if(!el) return toast(kind,title,body,opts);
+  el.className='toast '+kind; el.innerHTML=toastMarkup(kind,title,body);
+  if(!opts.sticky) setTimeout(()=>dismissToast(id),opts.ms||4200);
+  return id;
+}
+function dismissToast(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.style.transition='opacity .3s ease, transform .3s ease'; el.style.opacity='0'; el.style.transform='translateY(6px)';
+  setTimeout(()=>el.remove(),300);
+}
+function handleIngest(p){
+  if(!p) return;
+  if(p.phase==='start'){
+    ingestToast=toast('work','Backing up…','Reading your export and encrypting it on this Mac.',{sticky:true});
+  }else if(p.phase==='done'){
+    updateToast(ingestToast,'good','Backup complete',esc(p.summary||'Done.'),{ms:5000});
+    ingestToast=null; refreshData();
+  }else if(p.phase==='error'){
+    const last=(p.error||'').split('\n').filter(Boolean).pop()||'Something went wrong.';
+    updateToast(ingestToast,'bad','Backup failed',esc(last),{ms:9000});
+    ingestToast=null;
+  }
+}
+async function refreshData(){
+  try{ STATUS=await (await fetch('/api/status')).json(); }catch(e){ return; }
+  renderRail();
+  if(onConnect) showConnect();
+  else if(active) openConnector(active);
+  else showDashboard();
+}
+
+/* ---------- top-bar menu ---------- */
+function toggleMenu(anchor){
+  const ex=document.getElementById('appmenu'); if(ex){ ex.remove(); return; }
+  const m=document.createElement('div'); m.className='menu'; m.id='appmenu';
+  let items=`<button data-mi="add"><span class="ico">${ic('plus',15,2)}</span>Add a downloaded export</button>`;
+  if(BRIDGE){
+    items+=`<button data-mi="syncall"><span class="ico">${ic('refresh',15,1.9)}</span>Back up all accounts now</button>`
+      +`<div class="sep"></div>`
+      +`<button data-mi="login"><span class="ico">${ic('clock',15,1.8)}</span><span style="flex:1">Start at login</span><span class="sw${PREFS.launchAtLogin?' on':''}" id="sw-login"></span></button>`
+      +`<div class="sep"></div>`
+      +`<button data-mi="reveal"><span class="ico">${ic('folder',15,1.9)}</span>Reveal data folder</button>`
+      +`<button data-mi="kit"><span class="ico">${ic('key',15,1.8)}</span>Show Recovery Kit</button>`;
+  }
+  m.innerHTML=items; document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect();
+  m.style.top=(r.bottom+6)+'px'; m.style.right=Math.max(8,(window.innerWidth-r.right))+'px';
+  m.querySelectorAll('[data-mi]').forEach(el=>el.addEventListener('click',(ev)=>{
+    const a=el.dataset.mi;
+    if(a==='login'&&BRIDGE){ // toggle in place; keep the menu open
+      ev.stopPropagation();
+      PREFS.launchAtLogin=!PREFS.launchAtLogin;
+      BRIDGE.setPref('launchAtLogin',PREFS.launchAtLogin);
+      const sw=document.getElementById('sw-login'); if(sw) sw.classList.toggle('on',PREFS.launchAtLogin);
+      return;
+    }
+    m.remove();
+    if(a==='add') addExport();
+    else if(a==='syncall'&&BRIDGE){ BRIDGE.syncAll(); toast('work','Backing up all accounts','Checking each connected platform for a ready export.',{ms:5000}); }
+    else if(a==='reveal'&&BRIDGE) BRIDGE.revealDataFolder();
+    else if(a==='kit'&&BRIDGE) BRIDGE.showRecoveryKit();
+  }));
+  setTimeout(()=>document.addEventListener('click',function h(e){
+    if(!m.contains(e.target)&&e.target!==anchor){ m.remove(); document.removeEventListener('click',h); }
+  },{once:false}),0);
+}
 
 /* ---------- boot ---------- */
 async function boot(){
+  if(BRIDGE) document.body.classList.add('electron');
+  const add=document.getElementById('tb-add'); if(add) add.addEventListener('click',showConnect);
+  const mn=document.getElementById('tb-menu'); if(mn) mn.addEventListener('click',(e)=>{ e.stopPropagation(); toggleMenu(mn); });
+  if(BRIDGE&&BRIDGE.onIngest) BRIDGE.onIngest(handleIngest);
+  if(BRIDGE&&BRIDGE.onAccounts) BRIDGE.onAccounts(list=>{ ACCOUNTS=list; if(onConnect) showConnect(); });
   const pane=document.getElementById('pane');
   try{ STATUS=await (await fetch('/api/status')).json(); }
   catch(e){ pane.innerHTML=emptyState('box','Could not load the archive','The local server did not respond. Close this tab and run <code>syt open</code> again.'); return; }
+  if(BRIDGE&&BRIDGE.accounts){ try{ ACCOUNTS=await BRIDGE.accounts(); }catch(e){} }
+  if(BRIDGE&&BRIDGE.getPrefs){ try{ PREFS=await BRIDGE.getPrefs()||PREFS; }catch(e){} }
   renderRail(); showDashboard();
 }
 
 /* ---------- left rail ---------- */
 function renderRail(){
   const r=document.getElementById('rail');
-  let h=`<div class="brand" aria-label="Save Your Shit"><span class="mark">${brandMark()}</span><span class="bt">Save Your Shit</span></div>`;
-  h+=`<button class="nav-item ${active?'':'active'}" data-nav="dash" title="Overview"><span class="ico">${ic('grid',16,1.8)}</span><span class="nm">Overview</span></button>`;
+  let h=`<button class="nav-item ${(!active&&!onConnect)?'active':''}" data-nav="dash" title="Overview"><span class="ico">${ic('grid',16,1.8)}</span><span class="nm">Overview</span></button>`;
+  const needs=ACCOUNTS.filter(a=>a.attention||a.lastResult==='attention'||a.lastResult==='reconnect').length;
+  h+=`<button class="nav-item ${onConnect?'active':''}" data-nav="connect" title="Accounts"><span class="ico">${ic('plug',16,1.9)}</span><span class="nm">Accounts</span>`
+    +(needs?`<span class="dot" style="background:var(--warn)"></span>`:'')+`</button>`;
   if(STATUS.connectors.length) h+=`<div class="sec">Platforms</div>`;
   STATUS.connectors.forEach((c,i)=>{
     const col=c.stale?'var(--warn)':(c.last_status==='error'?'var(--bad)':'var(--good)');
@@ -454,10 +696,126 @@ function renderRail(){
   r.innerHTML=h;
   r.querySelectorAll('[data-nav]').forEach(el=>{
     el.addEventListener('click',()=>{
-      if(el.dataset.nav==='dash') showDashboard();
+      const n=el.dataset.nav;
+      if(n==='dash') showDashboard();
+      else if(n==='connect') showConnect();
       else openConnector(STATUS.connectors[+el.dataset.i].connector);
     });
   });
+}
+
+/* ---------- accounts view ---------- */
+function relTime(iso){
+  if(!iso) return null;
+  const d=Date.parse(iso); if(!d) return null;
+  const s=Math.max(0,(Date.now()-d)/1000);
+  if(s<90) return 'just now';
+  if(s<5400) return Math.round(s/60)+'m ago';
+  if(s<172800) return Math.round(s/3600)+'h ago';
+  return Math.round(s/86400)+'d ago';
+}
+/* One account's state, as a pill + a sentence. */
+function acctState(a){
+  if(a.busy) return {cls:'',pulse:true,label:'Working',line:'Checking with '+a.name+'…'};
+  if(a.attention||a.lastResult==='attention')
+    return {cls:'wait',label:'Needs a click',line:a.detail||'One step needs you — press Finish.'};
+  if(a.lastResult==='reconnect')
+    return {cls:'err',label:'Reconnect',line:a.detail||'The session expired. Connect again.'};
+  if(a.lastResult==='error')
+    return {cls:'err',label:'Failed',line:a.detail||'The last backup did not finish.'};
+  if(a.lastResult==='downloading')
+    return {cls:'',pulse:true,label:'Downloading',line:a.detail||'Downloading your export…'};
+  if(a.lastResult==='requested')
+    return {cls:'wait',label:'Preparing',line:(a.detail||a.name+' is preparing your export')+' — we check back on our own.'};
+  if(a.lastSuccess)
+    return {cls:'ok',label:'Backed up',line:'Last backup '+(relTime(a.lastSuccess)||'recently')+'.'};
+  return {cls:'ok',label:'Connected',line:'First backup starts automatically.'};
+}
+function schedSelect(a){
+  const opts=SCHEDULES.map(([v,l])=>`<option value="${v}"${a.schedule===v?' selected':''}>${l}</option>`).join('');
+  return `<select class="sel" data-sched="${escA(a.id)}" aria-label="Backup frequency for ${escA(a.name)}">${opts}</select>`;
+}
+function showConnect(){
+  onConnect=true; active=null; activeThread=null; activeSpecial=null; renderRail();
+  document.getElementById('list').hidden=true;
+  document.getElementById('app').classList.add('mode-dash');
+  const auto=ACCOUNTS.filter(a=>a.auto), manual=ACCOUNTS.filter(a=>!a.auto);
+  const connectedCount=auto.filter(a=>a.connected).length;
+
+  let rows;
+  if(!BRIDGE){
+    rows=`<div class="card"><div class="manual"><div class="mm">
+      <div class="mn">Automatic backups need the desktop app</div>
+      <div class="mr">You’re viewing the archive in a browser. Open the Save Your Shit app to connect accounts and run backups on a schedule.</div>
+    </div></div></div>`;
+  }else{
+    rows=`<div class="card">`+auto.map(a=>{
+      const st=acctState(a);
+      const pill=`<span class="pill ${st.cls}"><span class="lamp${st.pulse?' pulse':''}"></span>${esc(st.label)}</span>`;
+      const acts=a.connected
+        ? `${schedSelect(a)}
+           ${(a.attention||a.lastResult==='attention'||a.lastResult==='reconnect')
+             ? `<button class="pbtn solid" data-sync="${escA(a.id)}">Finish</button>`
+             : `<button class="pbtn" data-sync="${escA(a.id)}"${a.busy?' disabled':''}>${a.busy?'<span class="spin"></span>':ic('refresh',12,2.2)} Back up now</button>`}
+           <button class="pbtn ghost" data-disc="${escA(a.id)}" title="Disconnect ${escA(a.name)}">Disconnect</button>`
+        : `<button class="pbtn solid" data-conn="${escA(a.id)}">${ic('plug',12,2.2)} Connect</button>`;
+      return `<div class="acct">${tile(a.id,'lg')}
+        <div class="amid"><div class="an">${esc(a.name)}</div>
+          <div class="as">${a.connected?pill+'<span>'+esc(st.line)+'</span>':'<span>Sign in once — backups run on their own after that.</span>'}</div></div>
+        <div class="aacts">${acts}</div></div>`;
+    }).join('')+`</div>`;
+  }
+
+  const manualRows=manual.length?`<div class="seclabel" style="margin-top:26px">Add by hand</div>
+    <div class="card">`+manual.map(a=>`<div class="manual">${tile(a.id,'lg')}
+      <div class="mm"><div class="mn">${esc(a.name)}</div><div class="mr">${esc(a.manualReason||'')}</div></div>
+      <button class="pbtn" data-add="1">${ic('plus',12,2.4)} Add file</button></div>`).join('')+`</div>`:'';
+
+  const addRow = BRIDGE
+    ? `<button class="card addrow" id="cn-add" style="width:100%;margin-top:12px">
+         <span class="ab-ic">${ic('cloud',18,1.9)}</span>
+         <span><span class="ab-t">Add a downloaded export</span>
+         <span class="ab-s">Anything you download yourself — the platform is detected automatically. Exports that land in your Downloads folder are picked up on their own.</span></span></button>`
+    : `<div class="card addrow" style="margin-top:12px"><span class="ab-ic">${ic('cloud',18,1.9)}</span>
+         <span><span class="ab-t">Add a downloaded export</span>
+         <span class="ab-s">In the terminal: <code>syt ingest ~/Downloads/your-export.zip</code></span></span></div>`;
+
+  const sub = BRIDGE
+    ? (connectedCount
+        ? connectedCount+(connectedCount===1?' account connected':' accounts connected')+' — backups run in the background, even when this window is closed.'
+        : 'Connect an account once. From then on this app requests your official export, downloads it, and files it away on the schedule you pick. Nothing is ever uploaded.')
+    : 'Everything stays on this Mac. Nothing is ever uploaded.';
+
+  document.getElementById('pane').innerHTML=`<div class="connect"><div class="connectin">
+    <header class="dhead"><h1>Accounts</h1><div class="dsub"><span>${esc(sub)}</span></div></header>
+    <div class="seclabel">Automatic</div>
+    ${rows}
+    ${addRow}
+    ${manualRows}</div></div>`;
+
+  const pane=document.getElementById('pane');
+  const ab=document.getElementById('cn-add'); if(ab) ab.addEventListener('click',addExport);
+  pane.querySelectorAll('[data-add]').forEach(el=>el.addEventListener('click',addExport));
+  pane.querySelectorAll('[data-conn]').forEach(el=>el.addEventListener('click',async()=>{
+    el.disabled=true; el.innerHTML='<span class="spin"></span> Waiting for sign-in…';
+    await BRIDGE.connect(el.dataset.conn); await loadAccounts();
+  }));
+  pane.querySelectorAll('[data-sync]').forEach(el=>el.addEventListener('click',()=>{
+    BRIDGE.syncNow(el.dataset.sync); el.disabled=true; el.innerHTML='<span class="spin"></span> Working…';
+  }));
+  pane.querySelectorAll('[data-disc]').forEach(el=>el.addEventListener('click',async()=>{
+    await BRIDGE.disconnect(el.dataset.disc); await loadAccounts();
+  }));
+  pane.querySelectorAll('[data-sched]').forEach(el=>el.addEventListener('change',()=>{
+    BRIDGE.setSchedule(el.dataset.sched,el.value);
+    toast('good','Schedule updated','Backups for '+esc(el.closest('.acct').querySelector('.an').textContent)+' now run '+esc(el.options[el.selectedIndex].text.toLowerCase())+'.');
+  }));
+}
+async function loadAccounts(){
+  if(!BRIDGE||!BRIDGE.accounts) return;
+  try{ ACCOUNTS=await BRIDGE.accounts(); }catch(e){ return; }
+  if(onConnect) showConnect();
+  renderRail();
 }
 
 /* ---------- dashboard ---------- */
@@ -465,7 +823,7 @@ function statTile(n,label,icon){
   return `<div class="stat"><span class="ic">${ic(icon,16,1.7)}</span><div class="n">${n}</div><div class="l">${label}</div></div>`;
 }
 function showDashboard(){
-  active=null; activeThread=null; activeSpecial=null; renderRail();
+  active=null; activeThread=null; activeSpecial=null; onConnect=false; renderRail();
   document.getElementById('list').hidden=true;
   document.getElementById('app').classList.add('mode-dash');
   const s=STATUS, pane=document.getElementById('pane');
@@ -493,8 +851,13 @@ function showDashboard(){
     pane.innerHTML=`<div class="dash"><div class="dashin">${body}</div></div>`;
   }else{
     pane.innerHTML=`<div class="dash"><div class="dashin" style="height:100%;display:flex;flex-direction:column">${body}
-      <div style="flex:1;display:grid;place-items:center">${emptyState('box','No data yet',
-      'Download an export, then choose <strong>Archive → Add Export…</strong> or drag it into this window.')}</div></div></div>`;
+      <div style="flex:1;display:grid;place-items:center"><div class="empty">
+        <span class="eicon">${ic('box',20,1.8)}</span>
+        <h3>Nothing backed up yet</h3>
+        <p>Connect an account once. This app then requests your official export, downloads it, and files it away on a schedule — automatically, on this Mac.</p>
+        <button class="tbtn primary" id="dash-connect" style="margin-top:14px;height:34px">${ic('plug',14,2)} Connect a platform</button>
+      </div></div></div></div>`;
+    const dc=document.getElementById('dash-connect'); if(dc) dc.addEventListener('click',showConnect);
   }
   pane.querySelectorAll('.pcard').forEach(el=>{
     el.addEventListener('click',()=>openConnector(s.connectors[+el.dataset.i].connector));
@@ -503,7 +866,7 @@ function showDashboard(){
 
 /* ---------- platform view ---------- */
 async function openConnector(id){
-  active=id; activeThread=null; activeSpecial=null; renderRail();
+  active=id; activeThread=null; activeSpecial=null; onConnect=false; renderRail();
   document.getElementById('app').classList.remove('mode-dash');
   const list=document.getElementById('list'); list.hidden=false;
   list.innerHTML=`<div class="hd"><h2>${tile(id,'lg')}<span>${esc(id)}</span></h2>

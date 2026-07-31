@@ -40,6 +40,9 @@ happens, you lose everything — chats, photos, the people you followed. This to
 is your **second layer of backup**: it takes the data exports you're legally
 entitled to and turns them into an encrypted, searchable archive you own forever.
 
+- **Automatic.** Connect an account once in the Mac app. From then on it requests
+  your official export, downloads it, and files it away on the schedule you pick
+  — daily, weekly, or monthly — in the background.
 - **Local-first, zero-server.** Everything runs on your computer. The only network
   traffic is to the platforms and (optionally) to *your own* cloud storage.
 - **Encrypted by default.** AES-256, with a printable Recovery Kit. We never see a
@@ -48,6 +51,27 @@ entitled to and turns them into an encrypted, searchable archive you own forever
   forever.
 - **Safe.** It uses your official data-export rights — not risky scraping that could
   get your account banned (the very thing you're insuring against).
+
+## Hands-off backups (Mac app)
+
+Open the app, go to **Accounts**, and press **Connect** next to a platform. You
+sign in once, on the platform's own page, in a session that stays on your Mac —
+no password ever passes through this app. After that it runs itself:
+
+| | |
+|---|---|
+| **Connect once** | Sign in to the platform in its real login page. |
+| **Pick a frequency** | Daily, weekly, monthly, or only when you ask. |
+| **It runs** | The app requests your export, waits for the platform to prepare it (hours, usually), downloads it, and adds it to your encrypted archive. |
+| **Only if needed** | If a platform demands a 2FA prompt or password re-confirm, the app opens that exact page and asks for one click. |
+
+Automated today: **Instagram, Facebook, X, Google Takeout, Snapchat, LinkedIn,
+Reddit**. Discord, Telegram, WhatsApp and Slack have no automatable web export,
+so those stay manual — but anything matching an export that lands in your
+`~/Downloads` is picked up and backed up on its own.
+
+The app keeps running in the menu bar after you close the window; that is what
+lets the schedule fire. Quit it from there to stop entirely.
 
 ## Get started in 30 seconds
 
