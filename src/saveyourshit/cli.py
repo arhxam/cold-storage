@@ -235,6 +235,24 @@ def view(
         webbrowser.open(path.as_uri())
 
 
+@app.command()
+def serve(
+    port: int = typer.Option(8787, help="Local port."),
+    host: str = typer.Option("127.0.0.1", help="Bind address (loopback by default)."),
+    open_browser: bool = typer.Option(True, "--open/--no-open", help="Open your browser."),
+    passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
+) -> None:
+    """Launch the local web app (dashboard + data viewer) in your browser."""
+    from .webapp import serve as serve_app
+
+    rt = _runtime(passphrase)
+    url = f"http://{host}:{port}/"
+    console.print(f"[green]✓[/] Save Your Shit is running at [bold]{url}[/]")
+    console.print("[dim]Loopback only — nothing leaves your machine. Ctrl-C to stop.[/]")
+    with rt.open_archive() as archive:
+        serve_app(archive, rt.config, host=host, port=port, open_browser=open_browser)
+
+
 @app.command(name="connectors")
 def connectors_cmd() -> None:
     """List the platforms this can back up."""

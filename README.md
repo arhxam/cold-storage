@@ -11,6 +11,16 @@ The backup has to already exist.
 
 </div>
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.jpg" alt="Save Your Shit dashboard" width="850">
+</p>
+<p align="center">
+  <img src="docs/screenshots/browse.jpg" alt="Browsing an Instagram archive" width="420">
+  <img src="docs/screenshots/search.jpg" alt="Searching your archive" width="420">
+</p>
+<p align="center"><em>The local web app (<code>syt serve</code>): a dashboard, per-platform
+browsing, and instant full-text search — all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
+
 ---
 
 ## Why
@@ -42,9 +52,9 @@ Then:
 ```bash
 syt init                                   # pick a passphrase, save your Recovery Kit
 syt ingest ~/Downloads/instagram-export.zip   # auto-detects the platform
+syt serve                                  # open the dashboard + viewer in your browser
 syt status                                 # what's backed up and where it lives
 syt search "that thing we talked about"    # full-text search, offline
-syt view                                   # browse everything in your browser
 ```
 
 Prefer to do it yourself? With [`uv`](https://docs.astral.sh/uv/) or `pipx`:
@@ -117,20 +127,52 @@ Run `syt connectors` to see everything supported.
 |---------|--------------|
 | `syt init` | One-time setup: folder, passphrase, Recovery Kit. |
 | `syt ingest <path>` | Back up an export (`.zip` or folder); auto-detects platform. |
-| `syt status` | Dashboard: items, media, size, and what's gone stale. |
+| `syt serve` | Launch the local web app (dashboard + viewer) in your browser. |
+| `syt status` | Dashboard: items, media, size, and what's gone stale (`--json` for scripts). |
 | `syt search <query>` | Full-text search across chats & posts. |
-| `syt view` | Build an offline HTML viewer of your archive. |
+| `syt view` | Build a single-file offline HTML viewer of your archive. |
+| `syt sync` | Encrypted versioned backup (restic) + mirror to your own cloud (rclone). |
+| `syt schedule` | Set up a periodic staleness reminder (launchd/cron/schtasks). |
+| `syt doctor` | Check your setup and optional tools. |
 | `syt connectors` | List supported platforms. |
 | `syt where [platform]` | Print exactly where data is stored. |
 | `syt passphrase` / `syt recover` | Change or recover your passphrase. |
+
+## Run it yourself in 2 minutes (with sample data)
+
+Want to see it before touching your real accounts? This seeds a throwaway archive
+and opens the app — nothing touches your accounts:
+
+```bash
+git clone https://github.com/arhxam/save-your-shit && cd save-your-shit
+uv sync --extra keyring
+
+# use a throwaway home so your real one is untouched
+export SYT_HOME=/tmp/syt-demo
+
+# make a tiny fake Instagram export and back it up
+mkdir -p /tmp/ig/your_instagram_activity/messages/inbox/maya
+printf '{"title":"Maya","messages":[{"sender_name":"Maya","timestamp_ms":1701000000000,"content":"did you see the sunset photos??"}]}' \
+  > /tmp/ig/your_instagram_activity/messages/inbox/maya/message_1.json
+
+uv run syt init --no-encrypt
+uv run syt ingest /tmp/ig
+uv run syt serve            # opens http://127.0.0.1:8787 in your browser
+```
+
+Then do it for real: run `syt init` (no `SYT_HOME` override), download your actual
+exports (see [Getting your exports](#getting-your-exports)), and `syt ingest` each one.
+
+**Test everything works:** `uv run pytest` (152+ tests) and `uv run syt doctor`.
 
 ## Roadmap
 
 - **Phase 1 (now):** engine + `syt` CLI + 11 connectors (Instagram, Facebook,
   Discord, X, Telegram, Reddit, WhatsApp, Google/YouTube, Slack, Snapchat,
-  LinkedIn) + offline viewer + cloud sync (`restic`+`rclone`) + scheduling. ✅
-- **Phase 2:** live connectors that auto-fetch (no manual export), and a desktop
-  app with a dashboard + browsable data viewer + a real download button.
+  LinkedIn) + the local web app (`syt serve`) + offline viewer + cloud sync
+  (`restic`+`rclone`) + scheduling. ✅
+- **Phase 2:** live connectors that auto-fetch (no manual export), and a packaged
+  desktop app (the web app wrapped with a native installer + download button).
 - **Phase 3:** a browser extension that safely triggers exports from your real
   session.
 
