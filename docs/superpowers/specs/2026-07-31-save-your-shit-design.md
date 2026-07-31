@@ -5,9 +5,18 @@
 > ban can never erase your history. **No server. Nothing leaves your device except
 > to storage you control.**
 
-Status: **Design — pending approval**
+Status: **Phase 1 implemented** (engine + `syt` CLI + 4 connectors; see below)
 Date: 2026-07-31
 Working title: *Save Your Shit* (rename candidate before public launch)
+
+> **Build status.** Phase 1 is implemented and tested (`src/saveyourshit`, 46 tests,
+> CI on Linux/macOS/Windows × Py3.11/3.12): the encrypted content-addressed store,
+> AES-256 key custody + Recovery Kit, the connector framework, Rail-A export
+> parsers for **Instagram, Facebook/Messenger, Discord, X**, the `syt` CLI
+> (`init/ingest/status/search/view/where/connectors/passphrase/recover`), the
+> dead-man's-switch staleness check, and an offline HTML viewer. Phases 2–3 (live
+> API connectors, cloud sync, desktop app, browser extension) remain as designed
+> below.
 
 ---
 
