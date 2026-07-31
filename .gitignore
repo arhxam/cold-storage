@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+# Virtual envs
+.venv/
+venv/
+# uv
+.uv/
+# Test / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+# OS
+.DS_Store
+# Local user data — never commit anyone's actual backups.
+# Anchored to repo root so it doesn't match the src/saveyourshit package
+# (macOS filesystems match ignore patterns case-insensitively).
+/SaveYourShit/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

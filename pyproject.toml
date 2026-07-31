@@ -1,0 +1,78 @@
+[project]
+name = "saveyourshit"
+version = "0.1.0"
+description = "Local-first backup for your own social-media data. No server. Your data stays yours."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Save Your Shit contributors" }]
+keywords = ["backup", "social-media", "data-portability", "local-first", "instagram", "privacy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Archiving :: Backup",
+]
+
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.7",
+    "cryptography>=42.0",
+    "platformdirs>=4.2",
+]
+
+[project.optional-dependencies]
+keyring = ["keyring>=25.0"]
+# Live connectors that talk to platform APIs (Phase 2+). Kept optional so the
+# core installs cleanly with zero heavy/native deps.
+connectors = [
+    "telethon>=1.36",
+    "praw>=7.7",
+]
+all = ["saveyourshit[keyring,connectors]"]
+
+[project.scripts]
+syt = "saveyourshit.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/arhxam/save-your-shit"
+Repository = "https://github.com/arhxam/save-your-shit"
+Issues = "https://github.com/arhxam/save-your-shit/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/saveyourshit"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["B008"]  # typer uses function calls in defaults
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # test fixtures read better as wide literals
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error::DeprecationWarning:saveyourshit.*"]
+
+[tool.coverage.run]
+source = ["saveyourshit"]
+branch = true
