@@ -319,10 +319,13 @@ INDEX_HTML = r"""<!doctype html>
         letter-spacing:.09em; padding:18px 10px 7px; white-space:nowrap; }
   .dot{ width:6px; height:6px; border-radius:50%; display:inline-block; flex:none; }
 
-  .tile{ width:22px; height:22px; border-radius:6px; display:grid; place-items:center;
-         font-size:11px; font-weight:700; color:#fff;
-         box-shadow:inset 0 0 0 1px rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.4); }
-  .tile.lg{ width:30px; height:30px; border-radius:9px; font-size:14px; }
+  /* Platform chip: the service's own mark, tinted with its brand colour on a
+     faint wash of the same. Reads instantly without shouting. */
+  .tile{ width:24px; height:24px; border-radius:7px; display:grid; place-items:center;
+         font-size:11px; font-weight:700; flex:none; }
+  .tile svg{ width:14px; height:14px; display:block; }
+  .tile.lg{ width:34px; height:34px; border-radius:9px; font-size:14px; }
+  .tile.lg svg{ width:19px; height:19px; }
 
   /* ------------------------------------------------------------------ */
   /* Middle column — conversation list                                   */
@@ -331,8 +334,9 @@ INDEX_HTML = r"""<!doctype html>
   .list .hd{ padding:18px 14px 12px; border-bottom:1px solid var(--line); }
   .list .hd h2{ margin:0 0 3px; font-size:15px; font-weight:650; letter-spacing:-.01em;
                 text-transform:capitalize; display:flex; align-items:center; gap:10px; }
-  .list .hsub{ font-size:11.5px; color:var(--text-3); padding-left:40px; margin-bottom:12px;
-               font-variant-numeric:tabular-nums; min-height:14px; }
+  .list .hsub{ font-size:11.5px; color:var(--text-3); padding-left:44px; margin-bottom:12px;
+               font-variant-numeric:tabular-nums; min-height:14px;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .searchwrap{ position:relative; }
   .searchwrap > svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; }
   .search{ width:100%; background:var(--bg); border:1px solid var(--line-2); color:var(--text);
@@ -540,8 +544,30 @@ function ic(n,s,w){s=s||16;w=w||2;return `<svg width="${s}" height="${s}" viewBo
 function brandMark(s){s=s||15;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>`;}
 function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
 function escA(s){return esc(s).replace(/"/g,'&quot;');}
-function brandColor(id){return BRAND[id]||"#4a463f";}
-function tile(id,cls){return `<span class="tile ${cls||''}" style="background:${brandColor(id)}">${esc((id[0]||'?').toUpperCase())}</span>`;}
+function brandColor(id){return BRAND[id]||"#71717a";}
+/* Each platform's own mark, drawn inline so the UI still works with no network.
+   `s` means stroke the path instead of filling it. */
+const PLATFORM_ICONS={
+  instagram:{s:1,p:'<rect x="2.6" y="2.6" width="18.8" height="18.8" rx="5.4"/><circle cx="12" cy="12" r="4.6"/><circle cx="17.5" cy="6.5" r="1.15" fill="currentColor" stroke="none"/>'},
+  facebook:{p:'M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.45 2.89h-2.33v6.99A10 10 0 0 0 22 12z'},
+  twitter:{p:'M17.53 3h3.02l-6.6 7.54L21.75 21h-6.07l-4.76-6.22L5.47 21H2.45l7.06-8.07L2.25 3h6.22l4.3 5.69L17.53 3zm-1.06 16.2h1.67L7.63 4.7H5.84l10.63 14.5z'},
+  whatsapp:{p:'M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22c5.46 0 9.9-4.45 9.9-9.91C21.95 6.45 17.5 2 12.04 2zm5.8 14.17c-.25.69-1.45 1.32-1.99 1.4-.51.08-1.15.11-1.86-.12a16.9 16.9 0 0 1-1.68-.62c-2.96-1.28-4.89-4.26-5.04-4.46-.15-.2-1.2-1.6-1.2-3.05 0-1.45.76-2.16 1.03-2.46.27-.3.59-.37.79-.37h.57c.18 0 .43-.07.67.51.25.6.85 2.05.92 2.2.08.15.13.32.03.52-.1.2-.15.32-.3.5l-.44.51c-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.03 1.12 1 2.06 1.31 2.36 1.46.3.15.47.13.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.72.81 2.01.96.3.15.5.22.57.35.07.12.07.72-.18 1.42z'},
+  telegram:{p:'M11.94 2C6.46 2 2 6.46 2 11.94s4.46 9.94 9.94 9.94 9.94-4.46 9.94-9.94S17.42 2 11.94 2zm4.6 6.77-1.54 7.26c-.11.51-.42.63-.85.39l-2.35-1.73-1.13 1.09c-.13.13-.24.24-.48.24l.17-2.4 4.37-3.95c.19-.17-.04-.26-.29-.09L9.04 13.3l-2.33-.73c-.5-.16-.51-.5.11-.75l9.1-3.51c.42-.15.79.1.65.75z'},
+  discord:{p:'M20.32 4.37A19.8 19.8 0 0 0 15.43 3c-.24.42-.46.86-.63 1.28a18.3 18.3 0 0 0-5.6 0C9.03 3.86 8.81 3.42 8.57 3a19.7 19.7 0 0 0-4.89 1.37C.58 8.98-.26 13.48.16 17.9a19.9 19.9 0 0 0 6.03 3.06c.49-.66.92-1.37 1.29-2.11a12.9 12.9 0 0 1-2.03-.98c.17-.13.34-.26.5-.4a14.2 14.2 0 0 0 12.1 0c.16.14.33.28.5.4-.65.39-1.33.72-2.04.98.37.74.8 1.45 1.29 2.11a19.9 19.9 0 0 0 6.04-3.06c.5-5.12-.84-9.58-3.52-13.53zM8.02 15.2c-1.18 0-2.16-1.08-2.16-2.4 0-1.33.95-2.42 2.16-2.42s2.18 1.09 2.16 2.42c0 1.32-.96 2.4-2.16 2.4zm7.96 0c-1.18 0-2.16-1.08-2.16-2.4 0-1.33.95-2.42 2.16-2.42s2.18 1.09 2.16 2.42c0 1.32-.95 2.4-2.16 2.4z'},
+  reddit:{p:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.8 11.33c.02.16.03.32.03.48 0 2.46-2.86 4.45-6.4 4.45s-6.4-1.99-6.4-4.45c0-.17.01-.33.03-.49a1.6 1.6 0 1 1 1.8-2.57 7.86 7.86 0 0 1 4.25-1.34l.81-3.8a.33.33 0 0 1 .39-.26l2.67.57a1.15 1.15 0 1 1-.15.72l-2.32-.5-.72 3.4a7.85 7.85 0 0 1 4.16 1.34 1.6 1.6 0 1 1 1.85 2.55zM9 13.5a1.15 1.15 0 1 1 2.3 0 1.15 1.15 0 0 1-2.3 0zm5.75 1.15a1.15 1.15 0 1 1 0-2.3 1.15 1.15 0 0 1 0 2.3zm.2 1.83c.14.14.14.36 0 .5-.88.88-2.57.95-3.06.95s-2.18-.07-3.06-.95a.35.35 0 0 1 .5-.5c.55.56 1.75.76 2.56.76s2-.2 2.56-.76c.14-.14.36-.14.5 0z'},
+  google:{p:'M21.35 11.1H12v3.2h5.35c-.23 1.4-1.66 4.1-5.35 4.1-3.22 0-5.85-2.67-5.85-5.95S8.78 6.5 12 6.5c1.83 0 3.06.78 3.76 1.45l2.56-2.47C16.68 3.96 14.53 3 12 3 6.98 3 3 6.98 3 12s3.98 9 9 9c5.2 0 8.65-3.65 8.65-8.8 0-.59-.06-1.04-.3-2.1z'},
+  snapchat:{p:'M12 2.2c2.83 0 4.98 2.15 5.08 4.98v2.25c.49.2.98-.2 1.47-.2.49 0 .98.29.98.78 0 .69-1.08.98-1.76 1.27-.29.1-.49.29-.39.59.49 1.57 1.96 3.04 3.53 3.33.29.1.49.29.39.59-.2.59-1.37.88-2.25.98-.2 0-.29.2-.39.39-.1.39-.2.88-.49.98-.39.1-.98-.2-1.76-.2-1.08 0-1.57.2-2.35.78-.69.49-1.27.98-2.35.98s-1.66-.49-2.35-.98c-.78-.59-1.27-.78-2.35-.78-.78 0-1.37.29-1.76.2-.29-.1-.39-.59-.49-.98-.1-.2-.2-.39-.39-.39-.88-.1-2.06-.39-2.25-.98-.1-.29.1-.49.39-.59 1.57-.29 3.04-1.76 3.53-3.33.1-.29-.1-.49-.39-.59-.69-.29-1.76-.59-1.76-1.27 0-.49.49-.78.98-.78.49 0 .98.39 1.47.2V7.18C7.02 4.35 9.17 2.2 12 2.2z'},
+  linkedin:{p:'M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zm1.78 13.02H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z'},
+  slack:{p:'M5.04 15.17a2.53 2.53 0 1 1-2.52-2.52h2.52v2.52zm1.27 0a2.53 2.53 0 0 1 5.05 0v6.31a2.53 2.53 0 0 1-5.05 0v-6.31zM8.83 5.04a2.53 2.53 0 1 1 2.53-2.52v2.52H8.83zm0 1.27a2.53 2.53 0 0 1 0 5.05H2.52a2.53 2.53 0 0 1 0-5.05h6.31zM18.96 8.83a2.53 2.53 0 1 1 2.52 2.52h-2.52V8.83zm-1.27 0a2.53 2.53 0 0 1-5.04 0V2.52a2.53 2.53 0 0 1 5.04 0v6.31zM15.17 18.96a2.53 2.53 0 1 1-2.52 2.52v-2.52h2.52zm0-1.27a2.53 2.53 0 0 1 0-5.04h6.31a2.53 2.53 0 0 1 0 5.04h-6.31z'}
+};
+function tile(id,cls){
+  const g=PLATFORM_ICONS[id], col=brandColor(id);
+  if(!g) return `<span class="tile ${cls||''}" style="color:${col}">${esc((id[0]||'?').toUpperCase())}</span>`;
+  const inner=g.s
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${g.p}</svg>`
+    : `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${g.p}"/></svg>`;
+  return `<span class="tile ${cls||''}" style="color:${col};background:${col}1a">${inner}</span>`;
+}
 function avColor(s){let h=0;for(const c of (s||'?'))h=(h*31+c.charCodeAt(0))>>>0;return AV[h%AV.length];}
 function initial(s){return esc((s||'?').trim()[0]?.toUpperCase()||'?');}
 function fmtTime(s){return (s||'').slice(11,16);}
@@ -837,8 +863,13 @@ function showDashboard(){
   const enc=s.encrypted
     ?`<span class="badge good">${ic('lock',11,2.2)}Encrypted</span>`
     :`<span class="badge warn">${ic('unlock',11,2.2)}Not encrypted</span>`;
+  // Freshest backup across every account: the one number that answers
+  // "is my stuff actually safe right now?".
+  const lastAny=(ACCOUNTS||[]).map(a=>a.lastSuccess).filter(Boolean).sort().pop()
+    ||(s.connectors||[]).map(c=>c.last_run_at).filter(Boolean).sort().pop();
+  const fresh=lastAny?`<span class="badge good">${ic('check',11,2.6)}Last backup ${esc(relTime(lastAny)||'recently')}</span>`:'';
   let body=`<header class="dhead"><h1>Your archive</h1>
-    <div class="dsub">${enc}<span>Stored locally at <code class="path">${esc(s.home)}</code></span></div></header>`;
+    <div class="dsub">${enc}${fresh}<span>Stored locally at <code class="path">${esc(s.home)}</code></span></div></header>`;
   if(s.connectors.length){
     body+=`<div class="stats">`
       +statTile(s.total_records.toLocaleString(),'Items','layers')
@@ -894,7 +925,8 @@ async function openConnector(id){
   const parts=[];
   if(THREADS.length) parts.push(THREADS.length.toLocaleString()+(THREADS.length===1?' conversation':' conversations'));
   for(const sp of SPECIALS) parts.push(sp.count.toLocaleString()+' '+sp.label.toLowerCase());
-  document.getElementById('hsub').textContent=parts.join(' · ');
+  const hs=document.getElementById('hsub');
+  hs.textContent=parts.join(' · '); hs.title=parts.join(' · ');
   document.getElementById('q').addEventListener('input',filterThreads);
   renderThreadRows(THREADS);
   if(THREADS.length) openThread(THREADS[0].thread);

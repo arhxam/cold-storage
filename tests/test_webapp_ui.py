@@ -136,6 +136,28 @@ def test_automation_controls_are_wired():
     assert "ACCOUNTS" in INDEX_HTML
 
 
+def test_platform_marks_are_real_logos_not_letters():
+    """Each platform shows its own mark, drawn inline (works offline)."""
+    assert "PLATFORM_ICONS" in INDEX_HTML
+    for platform in (
+        "instagram",
+        "facebook",
+        "twitter",
+        "whatsapp",
+        "telegram",
+        "discord",
+        "reddit",
+        "google",
+        "snapchat",
+        "linkedin",
+        "slack",
+    ):
+        assert f"{platform}:{{" in INDEX_HTML.replace(" ", ""), f"no logo for {platform}"
+    # Drawn inline as SVG — never fetched from a CDN.
+    assert 'viewBox="0 0 24 24"' in INDEX_HTML
+    assert "<img" not in INDEX_HTML
+
+
 def test_shadcn_zinc_tokens():
     """The UI uses the flat shadcn zinc-dark system, not the old blue gradients."""
     lowered = INDEX_HTML.lower()
