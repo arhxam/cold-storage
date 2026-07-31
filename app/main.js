@@ -24,6 +24,7 @@ const {
   nativeImage,
   powerMonitor,
   powerSaveBlocker,
+  screen,
 } = require("electron");
 const { spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
@@ -820,7 +821,11 @@ function updateTrayMenu() {
     { type: "separator" },
     { label: "Add Export…", click: () => pickAndIngest() },
     { label: "Reveal Data Folder", click: () => shell.showItemInFolder(sytHome()) },
+    { label: "Show Error Log", click: () => showErrorLog() },
     { type: "separator" },
+    // Version is reachable without opening a window — the first thing to ask
+    // a tester for is which build they are on.
+    { label: `Version ${app.getVersion()}`, enabled: false },
     {
       label: "Quit Save Your Shit",
       click: () => {
@@ -896,6 +901,28 @@ async function showMainWindow() {
   createWindow();
 }
 
+function showErrorLog() {
+  const log = path.join(sytHome(), "app-errors.log");
+  if (fs.existsSync(log)) {
+    shell.openPath(log);
+    return;
+  }
+  const msg = {
+    type: "info",
+    title: "Error log",
+    message: "No errors have been recorded.",
+    detail:
+      `Nothing has gone wrong since this archive was set up.\n\n` +
+      `If something does, it is written to:\n${log}`,
+    buttons: ["OK"],
+  };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    dialog.showMessageBox(mainWindow, msg).catch(() => {});
+  } else {
+    dialog.showMessageBox(msg).catch(() => {});
+  }
+}
+
 function showRecoveryKit() {
   const kit = path.join(sytHome(), "RECOVERY-KIT.txt");
   if (fs.existsSync(kit)) {
@@ -957,6 +984,12 @@ function setMenu() {
         {
           label: "Show Recovery Kit",
           click: () => showRecoveryKit(),
+        },
+        { type: "separator" },
+        {
+          // Testers need this: a background app is invisible when it breaks.
+          label: "Show Error Log",
+          click: () => showErrorLog(),
         },
       ],
     },
@@ -1038,14 +1071,32 @@ function registerIpc() {
   });
 }
 
+// Remember where the user put the window. Validated against the screens that
+// exist right now, so unplugging an external display cannot strand the app
+// off-screen with no way to get it back.
+function savedBounds() {
+  const b = loadSettings().windowBounds;
+  if (!b || typeof b.width !== "number" || typeof b.height !== "number") return null;
+  if (typeof b.x !== "number" || typeof b.y !== "number") return { width: b.width, height: b.height };
+  const visible = screen.getAllDisplays().some((d) => {
+    const a = d.workArea;
+    return b.x < a.x + a.width - 80 && b.x + b.width > a.x + 80 && b.y < a.y + a.height - 40 && b.y + b.height > a.y;
+  });
+  return visible ? b : { width: b.width, height: b.height };
+}
+
 function createWindow() {
+  const b = savedBounds() || {};
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: b.width || 1280,
+    height: b.height || 820,
+    ...(typeof b.x === "number" ? { x: b.x, y: b.y } : {}),
     minWidth: 900,
     minHeight: 640,
     title: "Save Your Shit",
-    backgroundColor: "#100f0d",
+    // Must match the UI's --bg (zinc-950), or the window flashes the old warm
+    // brown for a frame before the page paints.
+    backgroundColor: "#09090b",
     // Fold the window controls into the app itself: the traffic lights float
     // over our own top bar instead of sitting in a separate OS strip.
     titleBarStyle: "hiddenInset",
@@ -1056,6 +1107,14 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
     },
   });
+
+  const rememberBounds = () => {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return;
+    loadSettings().windowBounds = mainWindow.getNormalBounds();
+    saveSettings();
+  };
+  mainWindow.on("resize", rememberBounds);
+  mainWindow.on("move", rememberBounds);
 
   // Drag-and-drop of a file/folder onto the window triggers a file:// navigation;
   // intercept it and ingest instead.
@@ -1071,6 +1130,7 @@ function createWindow() {
     }
   });
 
+  mainWindow.on("close", rememberBounds);
   mainWindow.on("closed", () => {
     mainWindow = null;
     scheduleServeIdleStop(); // reclaim the viewer process once idle
@@ -1147,6 +1207,11 @@ if (!gotLock) {
       getAccount,
       patchAccount,
       broadcast: broadcastAccounts,
+    });
+    app.setAboutPanelOptions({
+      applicationName: "Save Your Shit",
+      applicationVersion: app.getVersion(),
+      copyright: "Local-first backup for your own social-media data. MIT licensed.",
     });
     registerIpc();
     setMenu();

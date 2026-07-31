@@ -1,6 +1,7 @@
 """Brand asset contract for the web UI and packaged macOS app."""
 
 import json
+import re
 import struct
 from pathlib import Path
 from xml.etree import ElementTree
@@ -44,4 +45,20 @@ def test_native_window_enforces_the_verified_layout_floor():
     main = (ROOT / "app" / "main.js").read_text()
     assert "minWidth: 900" in main
     assert "minHeight: 640" in main
-    assert 'backgroundColor: "#100f0d"' in main
+
+
+def test_window_background_matches_the_ui_background():
+    """A mismatch flashes the wrong colour for a frame on every launch.
+
+    Asserted as a relationship rather than a literal, so the two cannot drift
+    apart again the next time the palette changes.
+    """
+    from saveyourshit.webapp import INDEX_HTML
+
+    ui = re.search(r"--bg:\s*(#[0-9a-fA-F]{6})", INDEX_HTML)
+    assert ui, "the UI must define a --bg token"
+    native = re.search(r'backgroundColor:\s*"(#[0-9a-fA-F]{6})"', (ROOT / "app" / "main.js").read_text())
+    assert native, "the native window must set a backgroundColor"
+    assert native.group(1).lower() == ui.group(1).lower(), (
+        f"native window is {native.group(1)} but the UI paints {ui.group(1)}"
+    )
