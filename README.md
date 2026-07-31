@@ -12,14 +12,15 @@ The backup has to already exist.
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.jpg" alt="Save Your Shit dashboard" width="850">
+  <img src="docs/screenshots/chat.jpg" alt="Save Your Shit — chat view" width="850">
 </p>
 <p align="center">
-  <img src="docs/screenshots/browse.jpg" alt="Browsing an Instagram archive" width="420">
-  <img src="docs/screenshots/search.jpg" alt="Searching your archive" width="420">
+  <img src="docs/screenshots/dashboard.jpg" alt="Dashboard" width="420">
+  <img src="docs/screenshots/conversations.jpg" alt="Conversation list" width="420">
 </p>
-<p align="center"><em>The local web app (<code>syt serve</code>): a dashboard, per-platform
-browsing, and instant full-text search — all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
+<p align="center"><em>The local web app (<code>syt serve</code>): your DMs as real
+conversations, a dashboard across every platform, and instant full-text search —
+all served from <code>127.0.0.1</code>, nothing leaves your machine.</em></p>
 
 ---
 
@@ -110,6 +111,17 @@ X ~7 days), so grab them promptly.
 | **LinkedIn** | Settings → Data Privacy → Get a copy of your data | Messages + connections. Link expires in 72h. |
 
 Run `syt connectors` to see everything supported.
+
+**The simplest habit:** drop your exports in one folder and let it sweep them up:
+
+```bash
+syt ingest ~/Downloads --all     # ingests every export it recognizes; safe to re-run
+syt schedule --every daily       # (optional) do that automatically
+```
+
+That's the whole motion: download → it lands in a folder → a scheduled `ingest --all`
+picks it up → it shows up in the app. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for how every piece connects.
 
 ## Your data & your keys
 

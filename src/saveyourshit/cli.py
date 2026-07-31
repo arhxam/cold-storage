@@ -113,16 +113,36 @@ def _print_recovery_kit(kit: RecoveryKit, cached: bool) -> None:
 
 @app.command()
 def ingest(
-    path: Path = typer.Argument(..., help="An export .zip or unpacked folder."),
+    path: Path = typer.Argument(..., help="An export .zip/folder, or a folder to scan with --all."),
     connector: str | None = typer.Option(
         None, "--connector", "-c", help="Force a connector instead of auto-detecting."
     ),
+    scan_all: bool = typer.Option(
+        False, "--all", help="Scan the folder and ingest every export inside (e.g. ~/Downloads)."
+    ),
     passphrase: str | None = typer.Option(None, help="Passphrase (if not cached)."),
 ) -> None:
-    """Back up a downloaded data export. Auto-detects the platform."""
+    """Back up a downloaded data export. Auto-detects the platform.
+
+    With --all, point it at a folder (like ~/Downloads) and it ingests every
+    recognizable export it finds — the simplest way to keep everything current.
+    """
     if not path.exists():
         _fail(f"no such file or folder: {path}")
     rt = _runtime(passphrase)
+
+    if scan_all:
+        with rt.open_archive() as archive, console.status(f"Scanning {path}…"):
+            results = Engine(archive).ingest_folder(path)
+        if not results:
+            console.print(f"[yellow]No recognizable exports found in[/] {path}")
+            return
+        total = sum(r.added for r in results)
+        for r in results:
+            console.print(f"[green]✓[/] {r.connector}: [bold]{r.added}[/] new items")
+        console.print(f"\n[bold]{total}[/] new items across {len(results)} export(s).")
+        return
+
     with rt.open_archive() as archive, console.status(f"Ingesting {path.name}…"):
         result = Engine(archive).ingest(path, connector_id=connector)
     if result.status == "error":

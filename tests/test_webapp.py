@@ -3,7 +3,7 @@ import json
 from saveyourshit.config import Config
 from saveyourshit.engine import Engine
 from saveyourshit.store.archive import Archive
-from saveyourshit.webapp import api_records, handle
+from saveyourshit.webapp import api_records, api_thread, api_threads, handle
 
 
 def test_index_served(layout):
@@ -34,6 +34,34 @@ def test_api_records_and_search(layout, instagram_export):
         # search narrows results
         hits = api_records(arc, {"connector": ["instagram"], "q": ["café"]})
         assert any("café" in (r.get("text") or "") for r in hits)
+
+
+def test_api_threads_and_thread(layout, instagram_export):
+    with Archive(layout) as arc:
+        Engine(arc).ingest(instagram_export)
+        data = api_threads(arc, "instagram")
+        assert "self" in data
+        assert any(t["thread"] == "Beyoncé" for t in data["threads"])  # mojibake-repaired
+        assert data["type_counts"].get("follower", 0) >= 1
+        msgs = api_thread(arc, "instagram", "Beyoncé")
+        assert msgs and all(m["type"] == "message" for m in msgs)
+
+
+def test_api_records_type_filter(layout, instagram_export):
+    with Archive(layout) as arc:
+        Engine(arc).ingest(instagram_export)
+        followers = api_records(arc, {"connector": ["instagram"], "type": ["follower"]})
+        assert followers and all(r["type"] == "follower" for r in followers)
+
+
+def test_threads_route(layout, instagram_export):
+    with Archive(layout) as arc:
+        Engine(arc).ingest(instagram_export)
+        code, ctype, body = handle("/api/threads", {"connector": ["instagram"]}, arc, Config())
+    assert code == 200 and "json" in ctype
+    import json as _json
+
+    assert "threads" in _json.loads(body)
 
 
 def test_404(layout):
