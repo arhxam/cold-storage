@@ -44,6 +44,8 @@ Issues = "https://github.com/arhxam/save-your-shit/issues"
 
 [dependency-groups]
 dev = [
+    "keyring>=25.7.0",
+    "pyinstaller>=6.21.0",
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "ruff>=0.6",

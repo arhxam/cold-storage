@@ -71,6 +71,9 @@ class Index:
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
+        # A concurrent reader (e.g. `syt serve`) and writer (`syt ingest`) may
+        # run as separate processes; wait a bit instead of "database is locked".
+        self._conn.execute("PRAGMA busy_timeout=5000")
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
 
