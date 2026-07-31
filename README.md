@@ -43,7 +43,8 @@ get you banned — the very thing you're insuring against.
 Everything happens on your Mac, from your own session. Nothing is ever uploaded.
 
 <p align="center"><img src="docs/screenshots/dashboard.png" alt="Overview — what's backed up, how fresh it is, and where it lives" width="900"></p>
-<p align="center"><img src="docs/screenshots/chat.png" alt="Your DMs as real conversations, searchable offline" width="900"></p>
+<p align="center"><img src="docs/screenshots/chat.png" alt="Your DMs as real conversations, with photos, searchable offline" width="900"></p>
+<p align="center"><img src="docs/screenshots/media.png" alt="Every photo and video from your chats and posts, in one place" width="900"></p>
 
 ## Platforms
 
@@ -84,21 +85,34 @@ schedule fire. Quit it from there to stop entirely.
 
 ## Your data & your keys
 
-Your archive is encrypted with AES-256 using a key wrapped by your passphrase, stored
-in one folder you can back up anywhere:
+Everything lives in one folder you can back up anywhere:
 
 ```
 ~/SaveYourShit/
 ├── index.sqlite      # full-text search index
-├── blobs/            # your photos & videos (deduplicated, encrypted)
+├── blobs/            # your photos & videos — AES-256 encrypted, deduplicated
 ├── instagram/
 │   ├── snapshots/    # your raw exports, kept forever, untouched
 │   └── manifest.jsonl
-└── keys/             # your wrapped key — never the passphrase
+└── keys/             # your key, wrapped by your passphrase — never the passphrase
 ```
 
-**Save your Recovery Kit.** It's shown once at setup and written to
-`~/SaveYourShit/RECOVERY-KIT.txt`. If you forget your passphrase *and* lose this
+**What's encrypted, precisely.** Your **media** (photos and video) is encrypted at
+rest with AES-256, using a key wrapped by your passphrase. The **search index, the
+manifests and the raw export snapshots are not** — they sit in that folder as
+regular files, protected by your Mac's own account and disk encryption (FileVault),
+not by us. So: someone who steals the *laptop* while it's off and FileVault is on
+gets nothing; someone already logged in as you can read your message text. Full
+at-rest encryption of the index is on the roadmap. We'd rather say this plainly
+than let you assume more than is true.
+
+Cloud sync (`syt sync`) is different — that goes out through restic, encrypted
+end-to-end, so your cloud provider only ever sees ciphertext.
+
+**Save your Recovery Kit.** It's shown once at setup, and the Mac app writes it to
+your **Desktop** — deliberately *outside* the archive folder, because that folder is
+what gets uploaded and the kit contains your key in the clear. Move it somewhere
+safe that isn't this computer. If you forget your passphrase *and* lose this
 machine, it is the only way back in. There is no reset link — that's the point.
 
 ## Command line
