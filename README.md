@@ -126,13 +126,13 @@ Run `syt connectors` to see everything supported.
 
 ## Roadmap
 
-- **Phase 1 (now):** engine + `syt` CLI + Instagram, Facebook, Discord, X,
-  Telegram, Reddit, WhatsApp. ✅
-- **Phase 2:** live connectors (Telegram, Reddit, Google), cloud sync (your own
-  B2/Drive/Dropbox via `restic`+`rclone`), and a desktop app with a dashboard +
-  browsable data viewer + a real download button.
+- **Phase 1 (now):** engine + `syt` CLI + 11 connectors (Instagram, Facebook,
+  Discord, X, Telegram, Reddit, WhatsApp, Google/YouTube, Slack, Snapchat,
+  LinkedIn) + offline viewer + cloud sync (`restic`+`rclone`) + scheduling. ✅
+- **Phase 2:** live connectors that auto-fetch (no manual export), and a desktop
+  app with a dashboard + browsable data viewer + a real download button.
 - **Phase 3:** a browser extension that safely triggers exports from your real
-  session, plus WhatsApp (local backup) and Snapchat.
+  session.
 
 See [`docs/superpowers/specs/`](docs/superpowers/specs/) for the full design.
 
