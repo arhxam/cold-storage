@@ -26,7 +26,7 @@ def test_ios_24h_locale_dates(tmp_path):
     root = tmp_path / "Alice"
     root.mkdir()
     (root / "_chat.txt").write_text(
-        "﻿‎[1/29/18, 12:24:03] Messages and calls are end-to-end encrypted. "
+        "\ufeff\u200e[1/29/18, 12:24:03] Messages and calls are end-to-end encrypted. "
         "No one outside of this chat, not even WhatsApp, can read or listen to them.\r\n"
         "[1/29/18, 12:24:10] Alice: hello\r\n"
         "[1/29/18, 12:25:44] Bob: first line\r\n"
@@ -54,9 +54,9 @@ def test_ios_ampm_attached_and_omitted_media(tmp_path):
     img = "00000035-PHOTO-2022-03-27-21-41-55.jpg"
     (root / img).write_bytes(b"\xff\xd8\xff\xe0JPEG")
     (root / "_chat.txt").write_text(
-        f"[3/27/22, 9:41:55 PM] Alice: ‎<attached: {img}>\n"
-        "‎[3/27/22, 9:42:10 PM] Alice: ‎image omitted\n"
-        "[3/28/22, 12:05:10 AM] Bob: nice pic\n",
+        f"[3/27/22, 9:41:55\u202fPM] Alice: \u200e<attached: {img}>\n"
+        "\u200e[3/27/22, 9:42:10\u202fPM] Alice: \u200eimage omitted\n"
+        "[3/28/22, 12:05:10\u202fAM] Bob: nice pic\n",
         encoding="utf-8",
     )
     recs, media = _collect(root)

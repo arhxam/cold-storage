@@ -198,8 +198,10 @@ class WhatsAppConnector(Connector):
                             filename=fname,
                         )
                     )
-            elif current is not None:
-                # continuation of a multi-line message
+            elif current is not None and line != "":
+                # continuation of a multi-line message. Skip blank lines, which
+                # otherwise appear as phantom continuations from CRLF/newline
+                # translation (e.g. an export opened and re-saved on Windows).
                 current.text = (current.text or "") + "\n" + line
         if records:
             yield Batch(records=records, media=media)
