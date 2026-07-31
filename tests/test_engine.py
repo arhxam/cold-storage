@@ -1,0 +1,67 @@
+import zipfile
+
+from saveyourshit.crypto import KeyManager
+from saveyourshit.engine import Engine
+from saveyourshit.models import RecordType
+from saveyourshit.store.archive import Archive
+
+
+def test_ingest_instagram_end_to_end(layout, instagram_export):
+    with Archive(layout) as arc:
+        result = Engine(arc).ingest(instagram_export)
+        assert result.status == "ok"
+        assert result.connector == "instagram"
+        assert result.added > 0
+        # snapshot of the raw export was kept immutably
+        assert result.snapshot is not None and result.snapshot.exists()
+        # searchable
+        assert arc.index.search("café")
+        # run recorded for the dead-man's-switch
+        assert arc.index.last_run("instagram")["status"] == "ok"
+
+
+def test_ingest_is_idempotent(layout, instagram_export):
+    with Archive(layout) as arc:
+        eng = Engine(arc)
+        first = eng.ingest(instagram_export)
+        count_after_first = arc.index.count("instagram")
+        second = eng.ingest(instagram_export)
+        assert second.added == 0
+        assert arc.index.count("instagram") == count_after_first
+        assert first.added == count_after_first
+
+
+def test_ingest_from_zip(layout, instagram_export, tmp_path):
+    zip_path = tmp_path / "ig.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for p in instagram_export.rglob("*"):
+            if p.is_file():
+                zf.write(p, p.relative_to(instagram_export))
+    with Archive(layout) as arc:
+        result = Engine(arc).ingest(zip_path)
+        assert result.status == "ok"
+        assert result.added > 0
+
+
+def test_ingest_encrypted(layout, instagram_export):
+    km = KeyManager(layout.keys_dir)
+    cipher, _ = km.create("pw")
+    with Archive(layout, cipher=cipher) as arc:
+        result = Engine(arc).ingest(instagram_export)
+        assert result.added > 0
+        # media blobs are encrypted on disk but verify + decrypt
+        rows = arc.index.records_for_type("instagram", RecordType.MESSAGE)
+        import json
+        for row in rows:
+            for sha in json.loads(row["media"]):
+                assert arc.blobs.verify(sha)
+
+
+def test_unrecognized_export_raises(layout, tmp_path):
+    junk = tmp_path / "junk"
+    junk.mkdir()
+    (junk / "random.txt").write_text("nothing here")
+    with Archive(layout) as arc:
+        import pytest
+        with pytest.raises(ValueError):
+            Engine(arc).ingest(junk)
