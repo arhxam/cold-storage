@@ -127,6 +127,17 @@ function waitForHttp(url, timeoutMs = 30000) {
 // First run: init + Recovery Kit
 // ---------------------------------------------------------------------------
 
+// Set during first-run init, shown once the main window exists.
+let pendingFirstRunNotice = null;
+
+function flushFirstRunNotice() {
+  if (!pendingFirstRunNotice) return;
+  const notice = pendingFirstRunNotice;
+  pendingFirstRunNotice = null;
+  // Non-blocking: the app is already usable behind this.
+  dialog.showMessageBox(mainWindow, notice).catch(() => {});
+}
+
 function ensureInitialized() {
   const home = sytHome();
   const configFile = path.join(home, "config.toml");
@@ -157,7 +168,9 @@ function ensureInitialized() {
     } catch {
       /* best effort */
     }
-    dialog.showMessageBoxSync({
+    // Show this AFTER the window is up (see flushFirstRunNotice) so the app
+    // never sits behind a modal with nothing painted underneath it.
+    pendingFirstRunNotice = {
       type: "info",
       title: "Recovery Kit",
       message: "Your archive is encrypted. Save your Recovery Kit now.",
@@ -168,7 +181,7 @@ function ensureInitialized() {
         "way to recover your data if this Mac is lost. Your encryption key " +
         "is stored in the macOS Keychain, so you never need to type a passphrase.",
       buttons: ["I saved it"],
-    });
+    };
     return true;
   }
 
@@ -176,7 +189,7 @@ function ensureInitialized() {
   // than a bricked first run.
   const res2 = runSyt(["init", "--no-encrypt"]);
   if (res2.ok) {
-    dialog.showMessageBoxSync({
+    pendingFirstRunNotice = {
       type: "warning",
       title: "Encryption disabled",
       message: "Set up without encryption",
@@ -186,7 +199,7 @@ function ensureInitialized() {
         "still never leaves this machine.\n\nDetails:\n" +
         (res.stderr || res.stdout).trim().slice(-500),
       buttons: ["OK"],
-    });
+    };
     return true;
   }
 
@@ -430,6 +443,8 @@ function createWindow() {
   });
 
   mainWindow.loadURL(serveUrl);
+  // Surface the first-run Recovery Kit once there's a window behind it.
+  mainWindow.webContents.once("did-finish-load", flushFirstRunNotice);
 }
 
 // ---------------------------------------------------------------------------
