@@ -23,6 +23,8 @@ coverage.xml
 htmlcov/
 # OS
 .DS_Store
+# Browser automation scratch output (screenshots/snapshots for QA)
+.playwright-mcp/
 # Local user data — never commit anyone's actual backups.
 # Anchored to repo root so it doesn't match the src/saveyourshit package
 # (macOS filesystems match ignore patterns case-insensitively).
