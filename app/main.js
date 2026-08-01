@@ -803,7 +803,9 @@ function watchDownloads() {
 
 function trayIcon() {
   // A 16pt template shield, drawn inline so we ship no extra asset.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>`;
+  // The container mark, flattened to one colour: a template image is a mask,
+  // so macOS recolours it for light/dark menu bars and only the alpha matters.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><polygon points="1.27,4.93 15.44,13.12 15.44,23.28 1.27,15.10" fill="black" opacity=".55"/><polygon points="15.44,13.12 22.73,8.90 22.73,19.07 15.44,23.28" fill="black" opacity=".8"/><polygon points="8.56,0.72 22.73,8.90 15.44,13.12 1.27,4.93" fill="black"/></svg>`;
   const img = nativeImage.createFromDataURL(
     "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64")
   );
