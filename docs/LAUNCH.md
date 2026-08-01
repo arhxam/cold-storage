@@ -11,16 +11,16 @@ Do this on your own Mac, with your own accounts, before anyone else sees it.
 
 ### Setup, from a real download
 
-1. Delete any old install: drag **Save Your Shit** from Applications to the Trash.
-   Leave `~/SaveYourShit` alone — you want to prove upgrades work.
+1. Delete any old install: drag **Cold Storage** from Applications to the Trash.
+   Leave `~/ColdStorage` alone — you want to prove upgrades work.
 2. Open the DMG, drag the app to Applications, open it from **Applications**
    (not from the disk image).
 3. **Expect:** no Gatekeeper warning, no right-click. If you see *"cannot be
    opened because the developer cannot be verified"*, stop — that's a signing
    problem, tell me.
 4. First run only: a Recovery Kit dialog. **Check your Desktop** — there should be
-   a file called `Save Your Shit — Recovery Kit.txt`. It must NOT be inside
-   `~/SaveYourShit`.
+   a file called `Cold Storage — Recovery Kit.txt`. It must NOT be inside
+   `~/ColdStorage`.
 
 ### The core loop
 
@@ -67,8 +67,8 @@ me that file plus which build (tray shows the version).
 - **Use a throwaway archive**, not your real one, unless you're happy showing your
   actual DMs on the internet:
   ```bash
-  export SYT_HOME=/tmp/demo
-  open -a "Save Your Shit"
+  export COLD_HOME=/tmp/demo
+  open -a "Cold Storage"
   ```
   Or blur in post. Your call — but decide *before* recording, not after.
 - Set your Mac to **dark mode**. The app is dark; a light menu bar looks wrong.
@@ -104,7 +104,7 @@ relief.
 
 ### Don't
 
-- Don't show `~/SaveYourShit` file listings; it's boring and it shows real paths.
+- Don't show `~/ColdStorage` file listings; it's boring and it shows real paths.
 - Don't show the Recovery Kit contents on camera. That's a real key.
 - Don't record a first-run where the export takes hours. Pre-bake it.
 
@@ -117,11 +117,11 @@ The hook that works is the specific fear, not the feature list:
 > Platforms can ban you with no warning — and when they do, "Download your data"
 > stops working too. The backup has to already exist.
 >
-> So I built Save Your Shit. Connect your accounts once; it requests your official
+> So I built Cold Storage. Connect your accounts once; it requests your official
 > export, downloads it, and keeps an encrypted, searchable copy on your Mac. On a
 > schedule. Nothing ever leaves your machine.
 >
-> Free, open source, signed for macOS: github.com/arhxam/save-your-shit
+> Free, open source, signed for macOS: github.com/arhxam/cold-storage
 
 Be honest about the limits in a reply — it earns more trust than it costs:
 
@@ -141,10 +141,10 @@ Be honest about the limits in a reply — it earns more trust than it costs:
   passphrase. The search index and raw exports aren't yet; they rely on your Mac's
   account and FileVault. It's written down plainly in the README, and full
   index encryption is next.
-- **"Where does it go?"** `~/SaveYourShit` on your machine. There is no server.
+- **"Where does it go?"** `~/ColdStorage` on your machine. There is no server.
   Optional cloud sync is end-to-end encrypted through restic, so your provider
   sees ciphertext only.
-- **"Windows/Linux?"** The engine (`syt`) already runs anywhere Python does. The
+- **"Windows/Linux?"** The engine (`cold`) already runs anywhere Python does. The
   desktop app is Mac-only for now.
 
 ### Before you post

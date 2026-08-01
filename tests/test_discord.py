@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from saveyourshit.connectors.discord import DiscordConnector
-from saveyourshit.models import RecordType
+from coldstorage.connectors.discord import DiscordConnector
+from coldstorage.models import RecordType
 
 CHANNEL_A = "1234567890123456789"  # will get the "c" prefix
 CHANNEL_B = "9876543210987654321"  # bare folder, no prefix

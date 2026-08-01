@@ -49,7 +49,7 @@ class Engine:
             raise FileNotFoundError(source)
 
         started = _now()
-        with tempfile.TemporaryDirectory(prefix="syt-unpack-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="cold-unpack-") as tmp:
             # Unpack under the export's own name, not a constant. WhatsApp's
             # iOS zips are all just "_chat.txt", so the containing folder IS
             # the conversation name — with a fixed "export" every chat you

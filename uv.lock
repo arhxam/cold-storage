@@ -211,6 +211,62 @@ wheels = [
 ]
 
 [[package]]
+name = "coldstorage"
+version = "0.3.1"
+source = { editable = "." }
+dependencies = [
+    { name = "cryptography" },
+    { name = "platformdirs" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "keyring" },
+    { name = "praw" },
+    { name = "telethon" },
+]
+connectors = [
+    { name = "praw" },
+    { name = "telethon" },
+]
+keyring = [
+    { name = "keyring" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "keyring" },
+    { name = "pyinstaller" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "coldstorage", extras = ["keyring", "connectors"], marker = "extra == 'all'" },
+    { name = "cryptography", specifier = ">=42.0" },
+    { name = "keyring", marker = "extra == 'keyring'", specifier = ">=25.0" },
+    { name = "platformdirs", specifier = ">=4.2" },
+    { name = "praw", marker = "extra == 'connectors'", specifier = ">=7.7" },
+    { name = "rich", specifier = ">=13.7" },
+    { name = "telethon", marker = "extra == 'connectors'", specifier = ">=1.36" },
+    { name = "typer", specifier = ">=0.12" },
+]
+provides-extras = ["keyring", "connectors", "all"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "keyring", specifier = ">=25.7.0" },
+    { name = "pyinstaller", specifier = ">=6.21.0" },
+    { name = "pytest", specifier = ">=8.2" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -746,62 +802,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/8a/fb22af2fd78a736e241fabf67e30ce1799a64244026377a49e133af90762/ruff-0.16.1-py3-none-win32.whl", hash = "sha256:d31765e131295b8445caf301e3e8a85b34d1b9b211b4109b7ba457888b051806", size = 10838258, upload-time = "2026-07-30T19:36:53.298Z" },
     { url = "https://files.pythonhosted.org/packages/d4/35/e57fd9fb5d423961df087a00b12d42c0a830288dc2f3b45ecca299158b4f/ruff-0.16.1-py3-none-win_amd64.whl", hash = "sha256:09b05e8b90c2cb06ad63464350e7a45e8e44a2dfe52072ebfba6666ca8d3f596", size = 11961111, upload-time = "2026-07-30T19:36:56.107Z" },
     { url = "https://files.pythonhosted.org/packages/cb/46/240ea004bf6dc4feb40e9832f2205a476a47dd5b8a3f8211a5fc5f95e20e/ruff-0.16.1-py3-none-win_arm64.whl", hash = "sha256:dbaadaac38c70239f056d306b7476f246b0bf000fa6b3876402acbf5b227eaf8", size = 11309414, upload-time = "2026-07-30T19:36:58.79Z" },
-]
-
-[[package]]
-name = "saveyourshit"
-version = "0.3.1"
-source = { editable = "." }
-dependencies = [
-    { name = "cryptography" },
-    { name = "platformdirs" },
-    { name = "rich" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "keyring" },
-    { name = "praw" },
-    { name = "telethon" },
-]
-connectors = [
-    { name = "praw" },
-    { name = "telethon" },
-]
-keyring = [
-    { name = "keyring" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "keyring" },
-    { name = "pyinstaller" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cryptography", specifier = ">=42.0" },
-    { name = "keyring", marker = "extra == 'keyring'", specifier = ">=25.0" },
-    { name = "platformdirs", specifier = ">=4.2" },
-    { name = "praw", marker = "extra == 'connectors'", specifier = ">=7.7" },
-    { name = "rich", specifier = ">=13.7" },
-    { name = "saveyourshit", extras = ["keyring", "connectors"], marker = "extra == 'all'" },
-    { name = "telethon", marker = "extra == 'connectors'", specifier = ">=1.36" },
-    { name = "typer", specifier = ">=0.12" },
-]
-provides-extras = ["keyring", "connectors", "all"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "keyring", specifier = ">=25.7.0" },
-    { name = "pyinstaller", specifier = ">=6.21.0" },
-    { name = "pytest", specifier = ">=8.2" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "ruff", specifier = ">=0.6" },
 ]
 
 [[package]]

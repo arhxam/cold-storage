@@ -1,9 +1,9 @@
-from saveyourshit.crypto import KeyManager
-from saveyourshit.models import Batch, MediaRef, NormalizedRecord, RecordType
-from saveyourshit.store.archive import Archive
-from saveyourshit.store.blobs import BlobStore
-from saveyourshit.store.index import Index
-from saveyourshit.store.manifest import Manifest
+from coldstorage.crypto import KeyManager
+from coldstorage.models import Batch, MediaRef, NormalizedRecord, RecordType
+from coldstorage.store.archive import Archive
+from coldstorage.store.blobs import BlobStore
+from coldstorage.store.index import Index
+from coldstorage.store.manifest import Manifest
 
 
 def test_blobstore_dedup(tmp_path):

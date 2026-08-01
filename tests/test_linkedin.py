@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from saveyourshit.connectors.linkedin import LinkedInConnector
-from saveyourshit.models import RecordType
+from coldstorage.connectors.linkedin import LinkedInConnector
+from coldstorage.models import RecordType
 
 MESSAGES_CSV = (
     "CONVERSATION ID,CONVERSATION TITLE,FROM,SENDER PROFILE URL,TO,DATE,SUBJECT,CONTENT,FOLDER\n"

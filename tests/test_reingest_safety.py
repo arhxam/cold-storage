@@ -12,7 +12,7 @@ import json
 import zipfile
 from pathlib import Path
 
-from saveyourshit.connectors import get as get_connector
+from coldstorage.connectors import get as get_connector
 
 
 def _uids(connector_id: str, root: Path) -> list[str]:
@@ -104,9 +104,9 @@ def _wa_zip(path: Path, who: str, msg: str) -> Path:
 
 def test_two_whatsapp_chat_zips_do_not_collide(tmp_path):
     """Both iOS zips contain only "_chat.txt", so the folder name is the chat."""
-    from saveyourshit.engine import Engine
-    from saveyourshit.paths import Layout
-    from saveyourshit.store.archive import Archive
+    from coldstorage.engine import Engine
+    from coldstorage.paths import Layout
+    from coldstorage.store.archive import Archive
 
     alice = _wa_zip(tmp_path / "WhatsApp Chat with Alice.zip", "Alice", "hello from alice")
     bob = _wa_zip(tmp_path / "WhatsApp Chat with Bob.zip", "Bob", "hello from bob")

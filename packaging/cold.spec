@@ -1,22 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for the standalone `syt` binary (onedir).
+"""PyInstaller spec for the standalone `cold` binary (onedir).
 
 Build from the repo root with:
 
-    uv run pyinstaller packaging/syt.spec --noconfirm
+    uv run pyinstaller packaging/cold.spec --noconfirm
 
-Output lands in dist/syt/ (dist/syt/syt is the executable).
+Output lands in dist/cold/ (dist/cold/cold is the executable).
 """
 
 a = Analysis(
-    ["syt_entry.py"],
+    ["cold_entry.py"],
     pathex=[],
     binaries=[],
     datas=[],
     hiddenimports=[
         # keyring discovers its backends dynamically via entry points, which
         # PyInstaller cannot see statically. Pull in the macOS Keychain backend
-        # (and the fallback chainer) explicitly so `syt init` can cache the key.
+        # (and the fallback chainer) explicitly so `cold init` can cache the key.
         "keyring.backends.macOS",
         "keyring.backends.chainer",
         "keyring.backends.fail",
@@ -38,7 +38,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="syt",
+    name="cold",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -56,5 +56,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="syt",
+    name="cold",
 )

@@ -18,7 +18,7 @@ _TEMPLATE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Save Your Shit — your archive</title>
+<title>Cold Storage — your archive</title>
 <style>
   :root {{ color-scheme: light dark; }}
   * {{ box-sizing: border-box; }}
@@ -54,7 +54,7 @@ _TEMPLATE = """<!doctype html>
   </div>
 </header>
 <main id="list"></main>
-<footer>Save Your Shit — your data, forever, offline.</footer>
+<footer>Cold Storage — your data, forever, offline.</footer>
 <script>
 const DATA = {data};
 const list = document.getElementById('list');

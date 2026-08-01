@@ -1,7 +1,7 @@
 // Preload used ONLY for capturing README screenshots.
 //
 // The UI decides once, at load, whether it is running inside the desktop app
-// (`window.sytBridge`). To photograph the app-mode chrome we have to provide
+// (`window.coldBridge`). To photograph the app-mode chrome we have to provide
 // that bridge before the page script runs — hence a preload rather than an
 // injected script. Every method is inert: nothing connects, syncs, or touches
 // a real account.
@@ -33,7 +33,7 @@ const ACCOUNTS = [
 
 const noop = () => Promise.resolve(true);
 
-contextBridge.exposeInMainWorld("sytBridge", {
+contextBridge.exposeInMainWorld("coldBridge", {
   isElectron: true,
   accounts: () => Promise.resolve(ACCOUNTS),
   getPrefs: () => Promise.resolve({ launchAtLogin: true, runInBackground: true }),

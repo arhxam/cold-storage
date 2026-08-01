@@ -8,8 +8,8 @@ and tests can intercept the argv without spawning a process.
 
 from __future__ import annotations
 
-from saveyourshit.sync.backup import RESTIC_BIN, ResticRepo, Runner, RunResult, SyncToolMissing
-from saveyourshit.sync.cloud import RCLONE_BIN, RcloneRemote
+from coldstorage.sync.backup import RESTIC_BIN, ResticRepo, Runner, RunResult, SyncToolMissing
+from coldstorage.sync.cloud import RCLONE_BIN, RcloneRemote
 
 __all__ = [
     "RCLONE_BIN",

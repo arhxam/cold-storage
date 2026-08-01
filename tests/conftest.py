@@ -7,21 +7,21 @@ from pathlib import Path
 
 import pytest
 
-from saveyourshit.paths import Layout
+from coldstorage.paths import Layout
 
 
 @pytest.fixture(autouse=True)
 def _fast_kdf(monkeypatch):
     """Use a cheap scrypt cost in tests, and never touch the real OS keychain."""
-    monkeypatch.setenv("SYT_SCRYPT_N", "1024")
-    monkeypatch.setenv("SYT_NO_KEYRING", "1")
+    monkeypatch.setenv("COLD_SCRYPT_N", "1024")
+    monkeypatch.setenv("COLD_NO_KEYRING", "1")
     monkeypatch.setenv("COLUMNS", "200")  # keep Rich from wrapping long paths in captured output
 
 
 @pytest.fixture
 def home(tmp_path, monkeypatch) -> Path:
-    h = tmp_path / "SaveYourShit"
-    monkeypatch.setenv("SYT_HOME", str(h))
+    h = tmp_path / "ColdStorage"
+    monkeypatch.setenv("COLD_HOME", str(h))
     return h
 
 

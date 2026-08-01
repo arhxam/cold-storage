@@ -1,7 +1,7 @@
 """Cloud sync of the archive tree via `rclone <https://rclone.org>`_.
 
 rclone is an *optional* external binary (like restic in
-:mod:`saveyourshit.sync.backup`). It moves an already-encrypted local tree to
+:mod:`coldstorage.sync.backup`). It moves an already-encrypted local tree to
 the user's *own* cloud storage (B2, Drive, Dropbox, S3, ...) — consistent with
 the local-first promise: the only network traffic is to storage the user
 controls.
@@ -17,7 +17,7 @@ import shutil
 from collections.abc import Sequence
 from pathlib import Path
 
-from saveyourshit.sync.backup import Runner, RunResult, SyncToolMissing, _default_runner
+from coldstorage.sync.backup import Runner, RunResult, SyncToolMissing, _default_runner
 
 RCLONE_BIN = "rclone"
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from saveyourshit.cli import app
+from coldstorage.cli import app
 
 runner = CliRunner()
 
@@ -17,7 +17,7 @@ def test_init_then_ingest_status_search(home, instagram_export, monkeypatch):
     assert "Recovery Kit" in r.output or "RECOVERY KIT" in r.output
     assert str(home) in r.output
 
-    monkeypatch.setenv("SYT_PASSPHRASE", "swordfish")
+    monkeypatch.setenv("COLD_PASSPHRASE", "swordfish")
 
     r = runner.invoke(app, ["ingest", str(instagram_export)])
     assert r.exit_code == 0, r.output
@@ -81,7 +81,7 @@ def test_recover_resets_passphrase(home, instagram_export, monkeypatch):
     r = runner.invoke(app, ["recover", code, "--new-passphrase", "fresh"])
     assert r.exit_code == 0, r.output
 
-    monkeypatch.setenv("SYT_PASSPHRASE", "fresh")
+    monkeypatch.setenv("COLD_PASSPHRASE", "fresh")
     r = runner.invoke(app, ["ingest", str(instagram_export)])
     assert r.exit_code == 0, r.output
 
@@ -89,7 +89,7 @@ def test_recover_resets_passphrase(home, instagram_export, monkeypatch):
 def test_version():
     r = runner.invoke(app, ["version"])
     assert r.exit_code == 0
-    assert "Save Your Shit" in r.output
+    assert "Cold Storage" in r.output
 
 
 def test_status_json(home, instagram_export, monkeypatch):
@@ -123,7 +123,7 @@ def test_sync_without_restic_is_graceful(home, monkeypatch):
 
 def test_schedule_prints_or_installs(home, tmp_path, monkeypatch):
     # never touch the real ~/Library/LaunchAgents
-    monkeypatch.setenv("SYT_LAUNCHAGENTS_DIR", str(tmp_path / "LaunchAgents"))
+    monkeypatch.setenv("COLD_LAUNCHAGENTS_DIR", str(tmp_path / "LaunchAgents"))
     runner.invoke(app, ["init", "--no-encrypt"])
     r = runner.invoke(app, ["schedule", "--every", "daily"])
     assert r.exit_code == 0

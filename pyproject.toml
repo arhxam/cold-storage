@@ -1,11 +1,11 @@
 [project]
-name = "saveyourshit"
+name = "coldstorage"
 version = "0.3.1"
 description = "Local-first backup for your own social-media data. No server. Your data stays yours."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Save Your Shit contributors" }]
+authors = [{ name = "Cold Storage contributors" }]
 keywords = ["backup", "social-media", "data-portability", "local-first", "instagram", "privacy"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -32,15 +32,15 @@ connectors = [
     "telethon>=1.36",
     "praw>=7.7",
 ]
-all = ["saveyourshit[keyring,connectors]"]
+all = ["coldstorage[keyring,connectors]"]
 
 [project.scripts]
-syt = "saveyourshit.cli:app"
+cold = "coldstorage.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/arhxam/save-your-shit"
-Repository = "https://github.com/arhxam/save-your-shit"
-Issues = "https://github.com/arhxam/save-your-shit/issues"
+Homepage = "https://github.com/arhxam/cold-storage"
+Repository = "https://github.com/arhxam/cold-storage"
+Issues = "https://github.com/arhxam/cold-storage/issues"
 
 [dependency-groups]
 dev = [
@@ -56,7 +56,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/saveyourshit"]
+packages = ["src/coldstorage"]
 
 [tool.ruff]
 line-length = 100
@@ -69,14 +69,14 @@ ignore = ["B008"]  # typer uses function calls in defaults
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]  # test fixtures read better as wide literals
-"src/saveyourshit/viewer.py" = ["E501"]  # embedded HTML/CSS/JS template
-"src/saveyourshit/webapp.py" = ["E501"]  # embedded HTML/CSS/JS template
+"src/coldstorage/viewer.py" = ["E501"]  # embedded HTML/CSS/JS template
+"src/coldstorage/webapp.py" = ["E501"]  # embedded HTML/CSS/JS template
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
-filterwarnings = ["error::DeprecationWarning:saveyourshit.*"]
+filterwarnings = ["error::DeprecationWarning:coldstorage.*"]
 
 [tool.coverage.run]
-source = ["saveyourshit"]
+source = ["coldstorage"]
 branch = true

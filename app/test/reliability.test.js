@@ -23,7 +23,7 @@ const t = async (name, fn) => {
     console.log(`  FAIL  ${name}\n        ${(e && e.message) || e}`);
   }
 };
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "syt-test-"));
+const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "cold-test-"));
 
 (async () => {
   console.log("\nStore — survives what a power cut does to a file");
@@ -146,7 +146,7 @@ const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "syt-test-"));
             "  • This export was not recognized by any connector.\n" +
             "  • It looks like an HTML export — re-download choosing JSON format, " +
             "which is what this tool reads.\n" +
-            "SYT_UNRECOGNIZED_EXPORT: could not recognize this export.",
+            "COLD_UNRECOGNIZED_EXPORT: could not recognize this export.",
         };
       },
       (e) => events.push(e)

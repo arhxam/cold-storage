@@ -1,4 +1,4 @@
-"""`syt check` — inspect an export and report coverage WITHOUT storing anything.
+"""`cold check` — inspect an export and report coverage WITHOUT storing anything.
 
 This is how you verify a parser actually matches your real export before trusting
 it: point it at your download and it prints how many messages, followers, posts,
@@ -33,7 +33,7 @@ class CheckResult:
 
 def check_export(source: Path, *, connector_id: str | None = None) -> CheckResult:
     source = Path(source)
-    with tempfile.TemporaryDirectory(prefix="syt-check-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="cold-check-") as tmp:
         unpacked = ensure_unpacked(source, Path(tmp) / "export")
         connector: Connector | None = (
             connectors.get(connector_id) if connector_id else connectors.detect_connector(unpacked)
@@ -77,7 +77,7 @@ def check_export(source: Path, *, connector_id: str | None = None) -> CheckResul
 def unrecognized_reasons(path: Path) -> list[str]:
     """Why an export wasn't recognized, in words a user can act on.
 
-    Shared by `syt check` and `syt ingest` so both explain it identically. Takes
+    Shared by `cold check` and `cold ingest` so both explain it identically. Takes
     a .zip or a folder; a zip is inspected by name so nothing is unpacked.
     """
     path = Path(path)
@@ -102,7 +102,7 @@ def unrecognized_reasons(path: Path) -> list[str]:
     else:
         reasons.append(
             "If you know the platform, pass --connector to force it "
-            "(see `syt connectors` for the list)."
+            "(see `cold connectors` for the list)."
         )
     return reasons
 

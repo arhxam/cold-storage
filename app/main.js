@@ -1,9 +1,9 @@
-// Save Your Shit — the Electron shell around the bundled `syt` engine.
+// Cold Storage — the Electron shell around the bundled `cold` engine.
 //
 // Responsibilities:
-//   1. First run: `syt init` with a generated passphrase (cached in the macOS
+//   1. First run: `cold init` with a generated passphrase (cached in the macOS
 //      Keychain by the engine) and save the Recovery Kit to the data folder.
-//   2. Spawn `syt serve` on a free localhost port and show it in a window.
+//   2. Spawn `cold serve` on a free localhost port and show it in a window.
 //   3. Accounts: sign in once per platform; the automation engine
 //      (automation.js) requests, downloads, and ingests official exports on a
 //      schedule — the app stays resident in the menu bar to do it.
@@ -43,15 +43,15 @@ const { IngestQueue } = require("./queue");
 // Paths
 // ---------------------------------------------------------------------------
 
-function sytBinary() {
+function coldBinary() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "syt", "syt");
+    return path.join(process.resourcesPath, "cold", "cold");
   }
-  return path.join(__dirname, "..", "dist", "syt", "syt");
+  return path.join(__dirname, "..", "dist", "cold", "cold");
 }
 
-function sytHome() {
-  return process.env.SYT_HOME || path.join(os.homedir(), "SaveYourShit");
+function coldHome() {
+  return process.env.COLD_HOME || path.join(os.homedir(), "ColdStorage");
 }
 
 /** Where the Recovery Kit goes: visible to the user, outside what gets synced. */
@@ -66,7 +66,7 @@ function recoveryKitDir() {
 }
 
 function childEnv() {
-  // Inherit the user's env; never set SYT_NO_KEYRING — the Keychain cache is
+  // Inherit the user's env; never set COLD_NO_KEYRING — the Keychain cache is
   // what makes later launches passwordless.
   return { ...process.env };
 }
@@ -105,13 +105,13 @@ let warnedWriteFailure = false;
 
 function loadSettings() {
   if (!store) {
-    store = new Store(sytHome());
+    store = new Store(coldHome());
     store.onWriteError = (msg, count) => {
       logCrash("settings-write", msg);
       if (count >= 2 && !warnedWriteFailure) {
         warnedWriteFailure = true;
         notify(
-          "Save Your Shit can’t save its settings",
+          "Cold Storage can’t save its settings",
           "Your disk may be full or read-only. Schedules may be lost on restart."
         );
       }
@@ -171,7 +171,7 @@ function accountsPayload() {
 }
 
 function broadcastAccounts() {
-  sendRenderer("syt:accounts", accountsPayload());
+  sendRenderer("cold:accounts", accountsPayload());
   updateTrayMenu();
 }
 
@@ -181,7 +181,7 @@ function broadcastAccounts() {
 
 function runSyt(args, timeoutMs = 120000) {
   // Synchronous helper for quick commands (init). No shell: args array.
-  const res = spawnSync(sytBinary(), args, {
+  const res = spawnSync(coldBinary(), args, {
     env: childEnv(),
     encoding: "utf8",
     timeout: timeoutMs,
@@ -205,7 +205,7 @@ function runSytAsync(args, timeoutMs = 2 * 60 * 60 * 1000) {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(sytBinary(), args, { env: childEnv() });
+      child = spawn(coldBinary(), args, { env: childEnv() });
     } catch (e) {
       return resolve({ ok: false, stdout: "", stderr: String(e) });
     }
@@ -306,7 +306,7 @@ function flushFirstRunNotice() {
 }
 
 function ensureInitialized() {
-  const home = sytHome();
+  const home = coldHome();
   const configFile = path.join(home, "config.toml");
   if (fs.existsSync(configFile)) return true;
 
@@ -320,9 +320,9 @@ function ensureInitialized() {
     // sync uploads, and this file holds the master key in the clear — putting
     // it there would hand the key to anyone who reached the backup. It also
     // belongs somewhere the user will actually see it.
-    const kitPath = path.join(recoveryKitDir(), "Save Your Shit — Recovery Kit.txt");
+    const kitPath = path.join(recoveryKitDir(), "Cold Storage — Recovery Kit.txt");
     const body = [
-      "Save Your Shit — Recovery Kit",
+      "Cold Storage — Recovery Kit",
       "=============================",
       "",
       codeMatch ? `Recovery code: ${codeMatch[1]}` : "(code below, in the full output)",
@@ -331,7 +331,7 @@ function ensureInitialized() {
       "It is the ONLY way to recover your encrypted backups if this",
       "machine (and its Keychain) is lost.",
       "",
-      "--- full `syt init` output ---",
+      "--- full `cold init` output ---",
       res.stdout,
     ].join("\n");
     try {
@@ -392,7 +392,7 @@ async function startServe() {
   serveStderr = [];
 
   serveChild = spawn(
-    sytBinary(),
+    coldBinary(),
     ["serve", "--no-open", "--port", String(servePort), "--host", "127.0.0.1"],
     // stdout is discarded rather than piped: nothing reads it, and a full
     // 64 KB pipe buffer would block the server process forever.
@@ -455,7 +455,7 @@ function handleServeExit(code) {
     // Backups still work, so keep running and explain when there is a window.
     const detail =
       "The encryption key was not found in the macOS Keychain. Open the " +
-      "archive once from Terminal so the key gets cached:\n\n    syt status\n\n" +
+      "archive once from Terminal so the key gets cached:\n\n    cold status\n\n" +
       "then relaunch this app.";
     if (mainWindow && !mainWindow.isDestroyed()) {
       dialog.showMessageBox(mainWindow, {
@@ -466,14 +466,14 @@ function handleServeExit(code) {
         buttons: ["OK"],
       }).catch(() => {});
     } else {
-      notify("Archive locked", "Open Save Your Shit to finish unlocking your archive.");
+      notify("Archive locked", "Open Cold Storage to finish unlocking your archive.");
     }
     return;
   }
 
   serveRestarts++;
   if (serveRestarts > 6) {
-    notify("Save Your Shit", "The archive viewer keeps stopping. Reopen the app to retry.");
+    notify("Cold Storage", "The archive viewer keeps stopping. Reopen the app to retry.");
     return; // give up on the VIEWER only — syncing continues regardless
   }
   const delay = Math.min(30000, 1000 * Math.pow(2, serveRestarts));
@@ -497,7 +497,7 @@ function handleServeExit(code) {
 // ---------------------------------------------------------------------------
 
 function incomingDir() {
-  return path.join(sytHome(), "incoming");
+  return path.join(coldHome(), "incoming");
 }
 
 /**
@@ -516,16 +516,16 @@ function onQueueEvent(ev) {
   ingestRunning = queue ? !!queue.current : false;
   setMenu();
   if (ev.phase === "start") {
-    sendRenderer("syt:ingest", { phase: "start", path: ev.path });
+    sendRenderer("cold:ingest", { phase: "start", path: ev.path });
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setTitle("Save Your Shit — Backing up…");
+      mainWindow.setTitle("Cold Storage — Backing up…");
     }
   } else if (ev.phase === "done") {
-    notify("Save Your Shit", ev.summary);
-    sendRenderer("syt:ingest", { phase: "done", summary: ev.summary });
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle("Save Your Shit");
+    notify("Cold Storage", ev.summary);
+    sendRenderer("cold:ingest", { phase: "done", summary: ev.summary });
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle("Cold Storage");
   } else if (ev.phase === "retry") {
-    sendRenderer("syt:ingest", {
+    sendRenderer("cold:ingest", {
       phase: "retry",
       error: ev.error,
       attempts: ev.attempts,
@@ -533,7 +533,7 @@ function onQueueEvent(ev) {
     });
   } else if (ev.phase === "error") {
     if (ev.permanent) permanentFailures.add(ev.path);
-    sendRenderer("syt:ingest", {
+    sendRenderer("cold:ingest", {
       phase: "error",
       error: ev.error,
       path: ev.path,
@@ -549,7 +549,7 @@ function onQueueEvent(ev) {
         ev.permanent ? ev.error : `${path.basename(ev.path)} could not be backed up.`
       );
     }
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle("Save Your Shit");
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle("Cold Storage");
   }
   broadcastAccounts();
 }
@@ -815,7 +815,7 @@ function updateTrayMenu() {
   if (!tray) return;
   const accts = accountsPayload().filter((a) => a.connected);
   const items = [
-    { label: "Open Save Your Shit", click: () => showMainWindow() },
+    { label: "Open Cold Storage", click: () => showMainWindow() },
     { type: "separator" },
   ];
   if (accts.length) {
@@ -851,14 +851,14 @@ function updateTrayMenu() {
   items.push(
     { type: "separator" },
     { label: "Add Export…", click: () => pickAndIngest() },
-    { label: "Reveal Data Folder", click: () => shell.showItemInFolder(sytHome()) },
+    { label: "Reveal Data Folder", click: () => shell.showItemInFolder(coldHome()) },
     { label: "Show Error Log", click: () => showErrorLog() },
     { type: "separator" },
     // Version is reachable without opening a window — the first thing to ask
     // a tester for is which build they are on.
     { label: `Version ${app.getVersion()}`, enabled: false },
     {
-      label: "Quit Save Your Shit",
+      label: "Quit Cold Storage",
       click: () => {
         quitting = true;
         app.quit();
@@ -872,7 +872,7 @@ function createTray() {
   if (tray) return;
   try {
     tray = new Tray(trayIcon());
-    tray.setToolTip("Save Your Shit");
+    tray.setToolTip("Cold Storage");
     tray.on("click", () => tray.popUpContextMenu());
     updateTrayMenu();
   } catch {
@@ -925,7 +925,7 @@ async function showMainWindow() {
       await startServe();
     } catch (e) {
       logCrash("showMainWindow/startServe", e);
-      notify("Save Your Shit", "Could not open the archive viewer. Backups still run.");
+      notify("Cold Storage", "Could not open the archive viewer. Backups still run.");
       return;
     }
   }
@@ -933,7 +933,7 @@ async function showMainWindow() {
 }
 
 function showErrorLog() {
-  const log = path.join(sytHome(), "app-errors.log");
+  const log = path.join(coldHome(), "app-errors.log");
   if (fs.existsSync(log)) {
     shell.openPath(log);
     return;
@@ -958,8 +958,8 @@ function showRecoveryKit() {
   // Older builds wrote it into the archive folder; check both so an existing
   // install still finds its kit.
   const candidates = [
-    path.join(recoveryKitDir(), "Save Your Shit — Recovery Kit.txt"),
-    path.join(sytHome(), "RECOVERY-KIT.txt"),
+    path.join(recoveryKitDir(), "Cold Storage — Recovery Kit.txt"),
+    path.join(coldHome(), "RECOVERY-KIT.txt"),
   ];
   for (const kit of candidates) {
     if (fs.existsSync(kit)) {
@@ -973,7 +973,7 @@ function showRecoveryKit() {
     message: "No Recovery Kit file found.",
     detail:
       `Expected at:\n${candidates[0]}\n\nIf you set this archive up with the ` +
-      "`syt` command line, the recovery code was shown once during `syt init`.",
+      "`cold` command line, the recovery code was shown once during `cold init`.",
     buttons: ["OK"],
   };
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1022,7 +1022,7 @@ function setMenu() {
       submenu: [
         {
           label: "Reveal Data Folder",
-          click: () => shell.showItemInFolder(sytHome()),
+          click: () => shell.showItemInFolder(coldHome()),
         },
         {
           label: "Show Recovery Kit",
@@ -1049,13 +1049,13 @@ function setMenu() {
 
 // Expose the small native surface the web UI drives. Registered once.
 function registerIpc() {
-  ipcMain.handle("syt:pickAndIngest", () => pickAndIngest());
-  ipcMain.handle("syt:revealDataFolder", () => shell.showItemInFolder(sytHome()));
-  ipcMain.handle("syt:showRecoveryKit", () => showRecoveryKit());
+  ipcMain.handle("cold:pickAndIngest", () => pickAndIngest());
+  ipcMain.handle("cold:revealDataFolder", () => shell.showItemInFolder(coldHome()));
+  ipcMain.handle("cold:showRecoveryKit", () => showRecoveryKit());
 
   // --- accounts / automation --------------------------------------------
-  ipcMain.handle("syt:accounts", () => accountsPayload());
-  ipcMain.handle("syt:connect", async (_e, id) => {
+  ipcMain.handle("cold:accounts", () => accountsPayload());
+  ipcMain.handle("cold:connect", async (_e, id) => {
     const r = await automation.connect(String(id));
     broadcastAccounts();
     if (r.connected) {
@@ -1066,29 +1066,29 @@ function registerIpc() {
     }
     return r;
   });
-  ipcMain.handle("syt:disconnect", async (_e, id) => {
+  ipcMain.handle("cold:disconnect", async (_e, id) => {
     await automation.disconnect(String(id));
     return true;
   });
-  ipcMain.handle("syt:setSchedule", (_e, id, schedule) => {
+  ipcMain.handle("cold:setSchedule", (_e, id, schedule) => {
     const ok = ["manual", "daily", "weekly", "monthly"].includes(schedule);
     patchAccount(String(id), { schedule: ok ? schedule : "manual" });
     broadcastAccounts();
     return true;
   });
-  ipcMain.handle("syt:syncNow", (_e, id) => {
+  ipcMain.handle("cold:syncNow", (_e, id) => {
     automation.runSync(String(id), { interactive: false, surfaceOnAttention: true });
     return true;
   });
-  ipcMain.handle("syt:syncAll", () => {
+  ipcMain.handle("cold:syncAll", () => {
     syncAll();
     return true;
   });
-  ipcMain.handle("syt:getPrefs", () => ({
+  ipcMain.handle("cold:getPrefs", () => ({
     ...loadSettings().prefs,
     launchAtLogin: app.getLoginItemSettings().openAtLogin,
   }));
-  ipcMain.handle("syt:setPref", (_e, key, value) => {
+  ipcMain.handle("cold:setPref", (_e, key, value) => {
     loadSettings();
     store.setPref(String(key), value);
     if (key === "launchAtLogin") {
@@ -1101,7 +1101,7 @@ function registerIpc() {
     store.flush(); // a pref the user just toggled must survive a hard reboot
     return true;
   });
-  ipcMain.handle("syt:openExternal", (_e, url) => {
+  ipcMain.handle("cold:openExternal", (_e, url) => {
     // Only ever open https:// links (a platform's data-download page) in the
     // real browser — never file://, never a local command.
     try {
@@ -1136,7 +1136,7 @@ function createWindow() {
     ...(typeof b.x === "number" ? { x: b.x, y: b.y } : {}),
     minWidth: 900,
     minHeight: 640,
-    title: "Save Your Shit",
+    title: "Cold Storage",
     // Must match the UI's --bg (zinc-950), or the window flashes the old warm
     // brown for a frame before the page paints.
     backgroundColor: "#09090b",
@@ -1188,6 +1188,43 @@ function createWindow() {
 // App lifecycle
 // ---------------------------------------------------------------------------
 
+/**
+ * Carry over state from before the rename.
+ *
+ * Electron derives userData from the product name, so "Save Your Shit" →
+ * "Cold Storage" moves the whole directory — including Partitions/, which holds
+ * every platform sign-in. Upgrading would silently log the user out of all of
+ * their connected accounts with no explanation. Move the old directory across
+ * once, before anything reads it.
+ *
+ * Runs before app.whenReady(): getPath('userData') is valid immediately, and
+ * the session layer must not touch the new path before the copy exists.
+ */
+function migrateLegacyUserData() {
+  try {
+    const current = app.getPath("userData");
+    if (fs.existsSync(path.join(current, "Partitions"))) return; // already ours
+    const legacy = path.join(path.dirname(current), "Save Your Shit");
+    if (legacy === current || !fs.existsSync(legacy)) return;
+    fs.mkdirSync(current, { recursive: true });
+    for (const entry of fs.readdirSync(legacy)) {
+      const from = path.join(legacy, entry);
+      const to = path.join(current, entry);
+      if (fs.existsSync(to)) continue;
+      try {
+        fs.cpSync(from, to, { recursive: true, errorOnExist: false, force: false });
+      } catch {
+        /* one unreadable item must not abort the migration */
+      }
+    }
+    // Deliberately not deleting the old directory: if anything about this went
+    // wrong, the user's sign-ins are still recoverable from it.
+  } catch {
+    /* a failed migration means "sign in again", never a failed launch */
+  }
+}
+migrateLegacyUserData();
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -1206,10 +1243,10 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
-    const bin = sytBinary();
+    const bin = coldBinary();
     if (!fs.existsSync(bin)) {
       dialog.showErrorBox(
-        "Save Your Shit",
+        "Cold Storage",
         `The bundled engine is missing:\n${bin}\n\nReinstall the app.`
       );
       app.quit();
@@ -1245,14 +1282,14 @@ if (!gotLock) {
     queue = new IngestQueue(store, (p) => runSytAsync(["ingest", p, "--no-snapshot"]), onQueueEvent);
 
     automation.init({
-      sytHome,
+      coldHome,
       enqueue: (p, meta) => ingestPath(p, meta),
       getAccount,
       patchAccount,
       broadcast: broadcastAccounts,
     });
     app.setAboutPanelOptions({
-      applicationName: "Save Your Shit",
+      applicationName: "Cold Storage",
       applicationVersion: app.getVersion(),
       copyright: "Local-first backup for your own social-media data. MIT licensed.",
     });
@@ -1267,7 +1304,7 @@ if (!gotLock) {
       /* best effort */
     }
     const recovered = queue.recover(incomingDir());
-    if (recovered) notify("Save Your Shit", `Resuming ${recovered} backup${recovered > 1 ? "s" : ""}…`);
+    if (recovered) notify("Cold Storage", `Resuming ${recovered} backup${recovered > 1 ? "s" : ""}…`);
 
     try {
       await startServe();
@@ -1275,7 +1312,7 @@ if (!gotLock) {
       // The viewer failing to start must not stop backups. Carry on headless
       // and let handleServeExit's backoff keep trying.
       logCrash("startServe", e);
-      notify("Save Your Shit", "The archive viewer did not start — backups still run.");
+      notify("Cold Storage", "The archive viewer did not start — backups still run.");
     }
 
     // Launched by the login item? Stay out of the way: no window, just the
@@ -1340,7 +1377,7 @@ if (!gotLock) {
 function logCrash(kind, err) {
   const line = `[${new Date().toISOString()}] ${kind}: ${(err && err.stack) || err}\n`;
   try {
-    const file = path.join(sytHome(), "app-errors.log");
+    const file = path.join(coldHome(), "app-errors.log");
     try {
       if (fs.statSync(file).size > 512 * 1024) fs.rmSync(file, { force: true });
     } catch {

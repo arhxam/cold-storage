@@ -28,6 +28,6 @@ jobs:
           # Don't clobber notes written by app/publish.sh, which publishes the
           # macOS build. Only fill them in if the release has none.
           generate_release_notes: false
-      # To also publish to PyPI (so `uvx saveyourshit` works), add a PyPI token
+      # To also publish to PyPI (so `uvx coldstorage` works), add a PyPI token
       # as the `PYPI_TOKEN` secret and uncomment:
       # - run: uv publish --token ${{ secrets.PYPI_TOKEN }}

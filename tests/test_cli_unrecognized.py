@@ -8,8 +8,8 @@ import zipfile
 
 from typer.testing import CliRunner
 
-from saveyourshit.cli import UNRECOGNIZED_MARKER, app
-from saveyourshit.preflight import unrecognized_reasons
+from coldstorage.cli import UNRECOGNIZED_MARKER, app
+from coldstorage.preflight import unrecognized_reasons
 
 runner = CliRunner()
 
@@ -41,8 +41,8 @@ def test_unrecognized_reasons_suggests_connector_when_not_html(tmp_path):
 
 
 def test_ingest_explains_instead_of_crashing(tmp_path, monkeypatch):
-    monkeypatch.setenv("SYT_HOME", str(tmp_path / "home"))
-    monkeypatch.setenv("SYT_NO_KEYRING", "1")
+    monkeypatch.setenv("COLD_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("COLD_NO_KEYRING", "1")
     assert runner.invoke(app, ["init", "--no-encrypt"]).exit_code == 0
 
     result = runner.invoke(app, ["ingest", str(_html_export(tmp_path)), "--no-snapshot"])

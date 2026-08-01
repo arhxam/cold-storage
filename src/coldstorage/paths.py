@@ -1,6 +1,6 @@
 """Filesystem layout. The user always knows exactly where their data lives.
 
-Default home is ``~/SaveYourShit``. Override with the ``SYT_HOME`` environment
+Default home is ``~/ColdStorage``. Override with the ``COLD_HOME`` environment
 variable (used heavily in tests). Everything — config, index, blobs, per-connector
 folders — lives under one home directory so it is trivially portable and
 back-up-able as a single tree.
@@ -11,14 +11,27 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-ENV_HOME = "SYT_HOME"
-DEFAULT_HOME = Path.home() / "SaveYourShit"
+ENV_HOME = "COLD_HOME"
+DEFAULT_HOME = Path.home() / "ColdStorage"
+
+#: This project was called "Save Your Shit" up to v0.3.1. Someone upgrading has
+#: an archive at the old path and possibly the old env var set, and silently
+#: pointing them at a new empty folder would look exactly like losing all of
+#: their data. Both are still honoured, and the old archive is preferred when
+#: it is the only one that exists.
+LEGACY_ENV_HOME = "SYT_HOME"
+LEGACY_HOME = Path.home() / "SaveYourShit"
 
 
 def get_home() -> Path:
-    """Return the Save Your Shit home directory (not guaranteed to exist yet)."""
-    override = os.environ.get(ENV_HOME)
-    return Path(override).expanduser().resolve() if override else DEFAULT_HOME
+    """Return the Cold Storage home directory (not guaranteed to exist yet)."""
+    override = os.environ.get(ENV_HOME) or os.environ.get(LEGACY_ENV_HOME)
+    if override:
+        return Path(override).expanduser().resolve()
+    # Keep using an existing pre-rename archive rather than starting an empty one.
+    if not DEFAULT_HOME.exists() and (LEGACY_HOME / "config.toml").exists():
+        return LEGACY_HOME
+    return DEFAULT_HOME
 
 
 class Layout:

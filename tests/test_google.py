@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from saveyourshit.connectors.google import GoogleConnector
-from saveyourshit.models import RecordType
+from coldstorage.connectors.google import GoogleConnector
+from coldstorage.models import RecordType
 
 WATCH_HISTORY = [
     {

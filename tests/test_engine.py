@@ -1,9 +1,9 @@
 import zipfile
 
-from saveyourshit.crypto import KeyManager
-from saveyourshit.engine import Engine
-from saveyourshit.models import RecordType
-from saveyourshit.store.archive import Archive
+from coldstorage.crypto import KeyManager
+from coldstorage.engine import Engine
+from coldstorage.models import RecordType
+from coldstorage.store.archive import Archive
 
 
 def test_ingest_instagram_end_to_end(layout, instagram_export):

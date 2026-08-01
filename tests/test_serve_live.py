@@ -17,9 +17,9 @@ from contextlib import closing
 
 import pytest
 
-from saveyourshit.config import Config
-from saveyourshit.store.archive import Archive
-from saveyourshit.webapp import serve
+from coldstorage.config import Config
+from coldstorage.store.archive import Archive
+from coldstorage.webapp import serve
 
 
 def _free_port() -> int:

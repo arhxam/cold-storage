@@ -9,9 +9,9 @@ anywhere in the UI chrome.
 
 import re
 
-from saveyourshit.config import Config
-from saveyourshit.store.archive import Archive
-from saveyourshit.webapp import INDEX_HTML, handle
+from coldstorage.config import Config
+from coldstorage.store.archive import Archive
+from coldstorage.webapp import INDEX_HTML, handle
 
 # Common emoji blocks: misc symbols/dingbats, emoticons, transport, supplemental
 # symbols, flags, plus the emoji variation selector.
@@ -89,7 +89,7 @@ def test_polish_hooks_present():
 
 def test_brand_mark_and_no_legacy_palettes():
     assert "function brandMark(" in INDEX_HTML
-    assert 'aria-label="Save Your Shit"' in INDEX_HTML
+    assert 'aria-label="Cold Storage"' in INDEX_HTML
     lowered = INDEX_HTML.lower()
     for legacy in ("#d9a05b", "#ecb873", "#2563eb", "#1d4ed8"):
         assert legacy not in lowered, f"legacy brand colour still present: {legacy}"
@@ -106,7 +106,7 @@ def test_narrow_rail_and_empty_archive_copy_are_app_native():
 def test_in_app_connect_flow_is_wired():
     """The desktop app connects accounts and backs up without the CLI."""
     # The native bridge + in-app flows.
-    assert "window.sytBridge" in INDEX_HTML
+    assert "window.coldBridge" in INDEX_HTML
     assert "function showConnect(" in INDEX_HTML
     assert "BRIDGE.addExport" in INDEX_HTML
     assert "handleIngest" in INDEX_HTML

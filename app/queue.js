@@ -1,6 +1,6 @@
 // queue.js — a durable, serialized ingest queue.
 //
-// Two exports can finish downloading at the same moment, and `syt ingest` must
+// Two exports can finish downloading at the same moment, and `cold ingest` must
 // not run twice at once against one archive. The old code guarded that with a
 // boolean and *dropped* the second file — silent data loss, which is the exact
 // failure this product exists to prevent.
@@ -20,7 +20,7 @@ const MAX_ATTEMPTS = 4;
 // those four times per launch, forever, wastes work and buries the one message
 // that would actually help the user. The engine tags them for us.
 const PERMANENT = [
-  "SYT_UNRECOGNIZED_EXPORT",
+  "COLD_UNRECOGNIZED_EXPORT",
   "could not recognize this export",
   "not recognized by any connector",
   "could not be opened — it may be corrupt",

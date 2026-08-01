@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from saveyourshit.connectors.slack import SlackConnector
+from coldstorage.connectors.slack import SlackConnector
 
 
 def make_export(root: Path) -> Path:

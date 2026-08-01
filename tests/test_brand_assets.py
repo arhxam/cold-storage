@@ -17,7 +17,7 @@ def _png_size(path: Path) -> tuple[int, int]:
 
 
 def test_logo_svg_is_vector_safe_and_blue():
-    logo = LOGO_DIR / "save-your-shit-mark.svg"
+    logo = LOGO_DIR / "cold-storage-mark.svg"
     root = ElementTree.parse(logo).getroot()
     assert root.attrib["viewBox"] == "0 0 1024 1024"
     source = logo.read_text()
@@ -28,7 +28,7 @@ def test_logo_svg_is_vector_safe_and_blue():
 
 def test_logo_png_family_has_exact_square_dimensions():
     for size in (16, 32, 64, 128, 256, 512, 1024):
-        path = LOGO_DIR / f"save-your-shit-mark-{size}.png"
+        path = LOGO_DIR / f"cold-storage-mark-{size}.png"
         assert _png_size(path) == (size, size)
 
 
@@ -53,7 +53,7 @@ def test_window_background_matches_the_ui_background():
     Asserted as a relationship rather than a literal, so the two cannot drift
     apart again the next time the palette changes.
     """
-    from saveyourshit.webapp import INDEX_HTML
+    from coldstorage.webapp import INDEX_HTML
 
     ui = re.search(r"--bg:\s*(#[0-9a-fA-F]{6})", INDEX_HTML)
     assert ui, "the UI must define a --bg token"

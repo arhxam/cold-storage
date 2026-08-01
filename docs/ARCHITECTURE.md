@@ -1,6 +1,6 @@
 # How it all connects
 
-Save Your Shit is one small engine with several faces. Everything runs on your
+Cold Storage is one small engine with several faces. Everything runs on your
 machine; the only network traffic is to the platforms (to fetch your exports) and,
 optionally, to *your own* cloud storage. There is no server we operate.
 
@@ -13,8 +13,8 @@ optionally, to *your own* cloud storage. There is no server we operate.
                                   │   ├─ twitter-archive/                      │
                                   │   └─ telegram-result.json                  │
                                   └───────────────┬────────────────────────────┘
-                                                  │  syt ingest <path>
-                                                  │  syt ingest ~/Downloads --all   ← simplest trigger
+                                                  │  cold ingest <path>
+                                                  │  cold ingest ~/Downloads --all   ← simplest trigger
                                                   ▼
    ┌───────────────────────────── ENGINE (engine.py) ─────────────────────────────┐
    │  1. detect which platform  →  connectors/*.py  (one per platform, Rail A)     │
@@ -34,9 +34,9 @@ optionally, to *your own* cloud storage. There is no server we operate.
                    │                                        ▼
    ┌───────────────┴─────────────┐            ┌─────────────────────────────────┐
    │  FACES                       │            │  OFFSITE (sync/)                │
-   │  • CLI      syt status/search│            │  restic → versioned encrypted   │
-   │  • Web app  syt serve  (chat)│            │  rclone → your B2/Drive/Dropbox │
-   │  • Viewer   syt view  (HTML) │            │  (provider sees ciphertext only)│
+   │  • CLI      cold status/search│            │  restic → versioned encrypted   │
+   │  • Web app  cold serve  (chat)│            │  rclone → your B2/Drive/Dropbox │
+   │  • Viewer   cold view  (HTML) │            │  (provider sees ciphertext only)│
    └──────────────────────────────┘            └─────────────────────────────────┘
 ```
 
@@ -64,7 +64,7 @@ one without reading the others — and the test suite covers each in isolation.
 The whole flow reduces to **"put exports in a folder, run one command"**:
 
 ```bash
-syt ingest ~/Downloads --all      # ingests every recognizable export it finds
+cold ingest ~/Downloads --all      # ingests every recognizable export it finds
 ```
 
 - **Manual:** run it whenever you download fresh exports. Idempotent — re-running
@@ -72,7 +72,7 @@ syt ingest ~/Downloads --all      # ingests every recognizable export it finds
 - **Automatic:** hand that same command to your OS scheduler once:
 
   ```bash
-  syt schedule --every daily       # or add the printed cron/schtasks line
+  cold schedule --every daily       # or add the printed cron/schtasks line
   ```
 
 That is the entire "motion": **download → drops into a folder → a scheduled

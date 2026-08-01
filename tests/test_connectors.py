@@ -1,7 +1,7 @@
-from saveyourshit import connectors
-from saveyourshit.connectors.base import detect_connector
-from saveyourshit.models import RecordType
-from saveyourshit.textutil import fix_meta_mojibake
+from coldstorage import connectors
+from coldstorage.connectors.base import detect_connector
+from coldstorage.models import RecordType
+from coldstorage.textutil import fix_meta_mojibake
 
 
 def _collect(connector, root):

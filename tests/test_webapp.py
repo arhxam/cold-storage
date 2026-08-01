@@ -1,9 +1,9 @@
 import json
 
-from saveyourshit.config import Config
-from saveyourshit.engine import Engine
-from saveyourshit.store.archive import Archive
-from saveyourshit.webapp import api_records, api_thread, api_threads, handle
+from coldstorage.config import Config
+from coldstorage.engine import Engine
+from coldstorage.store.archive import Archive
+from coldstorage.webapp import api_records, api_thread, api_threads, handle
 
 
 def test_index_served(layout):
@@ -11,7 +11,7 @@ def test_index_served(layout):
         code, ctype, body = handle("/", {}, arc, Config())
     assert code == 200
     assert "text/html" in ctype
-    assert b"Save Your Shit" in body
+    assert b"Cold Storage" in body
 
 
 def test_api_status(layout, instagram_export):
@@ -77,7 +77,7 @@ def test_server_starts_and_responds(layout, instagram_export):
     from http.server import HTTPServer
     from urllib.parse import parse_qs, urlparse
 
-    from saveyourshit.webapp import handle as route
+    from coldstorage.webapp import handle as route
 
     with Archive(layout) as arc:
         Engine(arc).ingest(instagram_export)
@@ -103,7 +103,7 @@ def test_server_starts_and_responds(layout, instagram_export):
         t.start()
         try:
             body = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5).read()
-            assert b"Save Your Shit" in body
+            assert b"Cold Storage" in body
             status = json.loads(
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status", timeout=5).read()
             )

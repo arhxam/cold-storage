@@ -30,7 +30,7 @@ class SyncToolMissing(RuntimeError):
         self.tool = tool
         super().__init__(
             f"'{tool}' was not found on PATH. It is an optional tool — install it "
-            f"(or bundle it next to syt) to enable this feature."
+            f"(or bundle it next to cold) to enable this feature."
         )
 
 

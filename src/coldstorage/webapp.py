@@ -1,6 +1,6 @@
 """A local web app: a chat-first archive browser, served on 127.0.0.1 only.
 
-This is the visual face of Save Your Shit without shipping an Electron bundle. A
+This is the visual face of Cold Storage without shipping an Electron bundle. A
 tiny stdlib HTTP server (no framework, no telemetry, loopback-only) serves a
 single-page messaging UI that reads the local archive and exposes a few JSON
 endpoints. Nothing leaves the machine.
@@ -231,7 +231,7 @@ INDEX_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Save Your Shit</title>
+<title>Cold Storage</title>
 <style>
   /* ------------------------------------------------------------------ */
   /* Design tokens — shadcn/ui "zinc dark". Flat, minimal, high contrast. */
@@ -630,7 +630,7 @@ INDEX_HTML = r"""<!doctype html>
 </head>
 <body>
 <div class="titlebar" id="titlebar">
-  <div class="tb-brand" aria-label="Save Your Shit"><span class="mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="bt">Save Your Shit</span></div>
+  <div class="tb-brand" aria-label="Cold Storage"><span class="mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="bt">Cold Storage</span></div>
   <div class="sp"></div>
   <button class="tbtn primary" id="tb-add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Connect account</button>
   <button class="tbtn icon" id="tb-menu" aria-label="More"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
@@ -823,7 +823,7 @@ let onConnect=false;
 let REQ=0;
 
 /* ---------- native bridge (present only inside the desktop app) ---------- */
-const BRIDGE=(typeof window!=='undefined' && window.sytBridge) ? window.sytBridge : null;
+const BRIDGE=(typeof window!=='undefined' && window.coldBridge) ? window.coldBridge : null;
 
 /* Accounts state, pushed from the native side. In a plain browser this stays
    empty and the UI falls back to "add a downloaded export by hand". */
@@ -838,7 +838,7 @@ function openExternal(url){
 }
 function addExport(){
   if(BRIDGE&&BRIDGE.addExport){ BRIDGE.addExport(); }
-  else toast('work','Add from the terminal','Run <code>syt ingest ~/Downloads/your-export.zip</code>, then this page updates automatically.',{ms:7000});
+  else toast('work','Add from the terminal','Run <code>cold ingest ~/Downloads/your-export.zip</code>, then this page updates automatically.',{ms:7000});
 }
 let TSEQ=0, ingestToast=null;
 function toastMarkup(kind,title,body){
@@ -950,7 +950,7 @@ async function boot(){
   if(BRIDGE&&BRIDGE.onAccounts) BRIDGE.onAccounts(list=>{ ACCOUNTS=list; if(onConnect) showConnect(); });
   const pane=document.getElementById('pane');
   try{ STATUS=await (await fetch('/api/status')).json(); }
-  catch(e){ pane.innerHTML=emptyState('box','Could not load the archive','The local server did not respond. Close this tab and run <code>syt open</code> again.'); return; }
+  catch(e){ pane.innerHTML=emptyState('box','Could not load the archive','The local server did not respond. Close this tab and run <code>cold open</code> again.'); return; }
   if(BRIDGE&&BRIDGE.accounts){ try{ ACCOUNTS=await BRIDGE.accounts(); }catch(e){} }
   if(BRIDGE&&BRIDGE.getPrefs){ try{ PREFS=await BRIDGE.getPrefs()||PREFS; }catch(e){} }
   renderRail(); showDashboard();
@@ -1025,7 +1025,7 @@ function showConnect(){
   if(!BRIDGE){
     rows=`<div class="card"><div class="manual"><div class="mm">
       <div class="mn">Automatic backups need the desktop app</div>
-      <div class="mr">You’re viewing the archive in a browser. Open the Save Your Shit app to connect accounts and run backups on a schedule.</div>
+      <div class="mr">You’re viewing the archive in a browser. Open the Cold Storage app to connect accounts and run backups on a schedule.</div>
     </div></div></div>`;
   }else{
     rows=`<div class="card">`+auto.map(a=>{
@@ -1062,7 +1062,7 @@ function showConnect(){
          <span class="ab-s">Anything you download yourself — the platform is detected automatically. Exports that land in your Downloads folder are picked up on their own.</span></span></button>`
     : `<div class="card addrow" style="margin-top:12px"><span class="ab-ic">${ic('cloud',18,1.9)}</span>
          <span><span class="ab-t">Add a downloaded export</span>
-         <span class="ab-s">In the terminal: <code>syt ingest ~/Downloads/your-export.zip</code></span></span></div>`;
+         <span class="ab-s">In the terminal: <code>cold ingest ~/Downloads/your-export.zip</code></span></span></div>`;
 
   const sub = BRIDGE
     ? (connectedCount

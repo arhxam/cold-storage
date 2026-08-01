@@ -1,17 +1,17 @@
 // Capture README screenshots from the real UI.
 //
-//   SYT_URL=http://127.0.0.1:PORT OUT=docs/screenshots npx electron app/test/screenshots.js
+//   COLD_URL=http://127.0.0.1:PORT OUT=docs/screenshots npx electron app/test/screenshots.js
 //
 // Loads the actual served app in a fixed-size window and writes PNGs. Using the
 // real UI (rather than a mock) means the screenshots cannot drift from what
-// ships. `SYT_FAKE_ACCOUNTS=1` injects a plausible Accounts state so that page
+// ships. `COLD_FAKE_ACCOUNTS=1` injects a plausible Accounts state so that page
 // can be shown without connecting anyone's real social accounts.
 
 const { app, BrowserWindow } = require("electron");
 const fs = require("fs");
 const path = require("path");
 
-const URL = process.env.SYT_URL || "http://127.0.0.1:8787/";
+const URL = process.env.COLD_URL || "http://127.0.0.1:8787/";
 const OUT = process.env.OUT || "docs/screenshots";
 const W = 1280;
 const H = 820;
@@ -37,7 +37,7 @@ app.whenReady().then(async () => {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      // Supplies an inert window.sytBridge so the UI renders its desktop-app
+      // Supplies an inert window.coldBridge so the UI renders its desktop-app
       // chrome. It must exist before the page script runs, hence a preload.
       preload: path.join(__dirname, "screenshot-preload.js"),
     },

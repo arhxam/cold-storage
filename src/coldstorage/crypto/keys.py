@@ -19,13 +19,17 @@ import base64
 import hashlib
 import json
 import os
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
 from .encryption import KEY_BYTES, Cipher, derive_key
 
 KEYFILE_VERSION = 1
-_KEYRING_SERVICE = "saveyourshit"
+_KEYRING_SERVICE = "coldstorage"
+#: The pre-rename service name (this project was "Save Your Shit" up to v0.3.1).
+#: Read-only fallback so an existing cached key keeps working after upgrading.
+_LEGACY_KEYRING_SERVICE = "saveyourshit"
 _KEYRING_USER = "master-key"
 
 
@@ -104,7 +108,7 @@ class KeyManager:
 
     # -- OS keychain cache ---------------------------------------------------
     def cache_in_keychain(self, cipher: Cipher) -> bool:
-        if os.environ.get("SYT_NO_KEYRING"):
+        if os.environ.get("COLD_NO_KEYRING"):
             return False
         try:
             import keyring
@@ -120,24 +124,37 @@ class KeyManager:
             return False  # no usable keychain backend (e.g. headless Linux)
 
     def unlock_from_keychain(self) -> Cipher | None:
-        if os.environ.get("SYT_NO_KEYRING"):
+        if os.environ.get("COLD_NO_KEYRING"):
             return None
         try:
             import keyring
         except ImportError:
             return None
+        stored = None
         try:
             stored = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USER)
         except Exception:
             return None
         if not stored:
-            return None
+            # Pre-rename installs cached the key under the old service name.
+            # Without this the archive would look permanently locked and the
+            # user would be told to dig out their Recovery Kit for no reason.
+            try:
+                stored = keyring.get_password(_LEGACY_KEYRING_SERVICE, _KEYRING_USER)
+            except Exception:
+                return None
+            if not stored:
+                return None
+            # Re-cache under the new name so this lookup only happens once.
+            # Reading worked; failing to write it forward is not fatal.
+            with suppress(Exception):
+                keyring.set_password(_KEYRING_SERVICE, _KEYRING_USER, stored)
         return Cipher(base64.b64decode(stored))
 
     # -- internals -----------------------------------------------------------
     def _scrypt_n(self) -> int:
-        """scrypt cost, overridable via ``SYT_SCRYPT_N`` (used to speed up tests)."""
-        override = os.environ.get("SYT_SCRYPT_N")
+        """scrypt cost, overridable via ``COLD_SCRYPT_N`` (used to speed up tests)."""
+        override = os.environ.get("COLD_SCRYPT_N")
         return int(override) if override else 2**15
 
     def _write_keyfile(self, master: bytes, passphrase: str) -> None:
@@ -161,7 +178,7 @@ class KeyManager:
 
     def _load_keyfile(self) -> dict:
         if not self.exists():
-            raise KeyError_("no keyfile; run `syt init` first")
+            raise KeyError_("no keyfile; run `cold init` first")
         return json.loads(self.keyfile.read_text(encoding="utf-8"))
 
     def _unwrap_master(self, passphrase: str) -> bytes:

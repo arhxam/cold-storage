@@ -1,4 +1,4 @@
-"""Tests for saveyourshit.scheduler — pure scheduling logic and OS artifact generators.
+"""Tests for coldstorage.scheduler — pure scheduling logic and OS artifact generators.
 
 No test touches the real LaunchAgents directory, crontab, or Task Scheduler.
 """
@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from saveyourshit.scheduler import (
+from coldstorage.scheduler import (
     cron_line,
     install_macos,
     is_due,
@@ -108,40 +108,40 @@ class TestIsDue:
 
 
 class TestLaunchdPlist:
-    ARGS = ["/usr/local/bin/syt", "run", "--all"]
+    ARGS = ["/usr/local/bin/cold", "run", "--all"]
 
     def test_is_well_formed_xml(self):
-        xml = launchd_plist("com.saveyourshit.backup", self.ARGS, 86400)
+        xml = launchd_plist("com.coldstorage.backup", self.ARGS, 86400)
         root = ET.fromstring(xml)
         assert root.tag == "plist"
 
     def test_contains_program_args_and_interval(self):
-        xml = launchd_plist("com.saveyourshit.backup", self.ARGS, 86400)
+        xml = launchd_plist("com.coldstorage.backup", self.ARGS, 86400)
         data = plistlib.loads(xml.encode("utf-8"))
-        assert data["Label"] == "com.saveyourshit.backup"
+        assert data["Label"] == "com.coldstorage.backup"
         assert data["ProgramArguments"] == self.ARGS
         assert data["StartInterval"] == 86400
         assert data["RunAtLoad"] is False
 
     def test_start_interval_key_present_in_text(self):
-        xml = launchd_plist("com.saveyourshit.backup", self.ARGS, 3600)
+        xml = launchd_plist("com.coldstorage.backup", self.ARGS, 3600)
         assert "StartInterval" in xml
         for arg in self.ARGS:
             assert arg in xml
 
     def test_empty_program_args_raises(self):
         with pytest.raises(ValueError, match="program_args"):
-            launchd_plist("com.saveyourshit.backup", [], 3600)
+            launchd_plist("com.coldstorage.backup", [], 3600)
 
     def test_nonpositive_interval_raises(self):
         with pytest.raises(ValueError, match="interval_seconds"):
-            launchd_plist("com.saveyourshit.backup", self.ARGS, 0)
+            launchd_plist("com.coldstorage.backup", self.ARGS, 0)
         with pytest.raises(ValueError, match="interval_seconds"):
-            launchd_plist("com.saveyourshit.backup", self.ARGS, -5)
+            launchd_plist("com.coldstorage.backup", self.ARGS, -5)
 
     def test_args_with_xml_special_chars_survive_roundtrip(self):
-        args = ["/bin/sh", "-c", "syt run && echo '<done>'"]
-        xml = launchd_plist("com.saveyourshit.backup", args, 60)
+        args = ["/bin/sh", "-c", "cold run && echo '<done>'"]
+        xml = launchd_plist("com.coldstorage.backup", args, 60)
         data = plistlib.loads(xml.encode("utf-8"))
         assert data["ProgramArguments"] == args
 
@@ -151,22 +151,22 @@ class TestLaunchdPlist:
 
 class TestCronLine:
     def test_daily(self):
-        assert cron_line("daily", "syt run") == "0 3 * * * syt run"
+        assert cron_line("daily", "cold run") == "0 3 * * * cold run"
 
     def test_weekly(self):
-        assert cron_line("weekly", "syt run") == "0 3 * * 0 syt run"
+        assert cron_line("weekly", "cold run") == "0 3 * * 0 cold run"
 
     def test_has_five_time_fields(self):
-        fields = cron_line("daily", "syt").split()
+        fields = cron_line("daily", "cold").split()
         assert fields[:5] == ["0", "3", "*", "*", "*"]
 
     def test_manual_raises(self):
         with pytest.raises(ValueError, match="manual"):
-            cron_line("manual", "syt run")
+            cron_line("manual", "cold run")
 
     def test_unknown_schedule_raises(self):
         with pytest.raises(ValueError):
-            cron_line("monthly", "syt run")
+            cron_line("monthly", "cold run")
 
 
 # ---------------------------------------------------------------- schtasks_command
@@ -174,25 +174,25 @@ class TestCronLine:
 
 class TestSchtasksCommand:
     def test_daily_shape(self):
-        argv = schtasks_command("SaveYourShit", "syt run", "daily")
+        argv = schtasks_command("ColdStorage", "cold run", "daily")
         assert argv[0] == "schtasks"
         assert argv[1] == "/Create"
-        assert argv[argv.index("/TN") + 1] == "SaveYourShit"
-        assert argv[argv.index("/TR") + 1] == "syt run"
+        assert argv[argv.index("/TN") + 1] == "ColdStorage"
+        assert argv[argv.index("/TR") + 1] == "cold run"
         assert argv[argv.index("/SC") + 1] == "DAILY"
         assert "/F" in argv
 
     def test_weekly_schedule_flag(self):
-        argv = schtasks_command("SaveYourShit", "syt run", "weekly")
+        argv = schtasks_command("ColdStorage", "cold run", "weekly")
         assert argv[argv.index("/SC") + 1] == "WEEKLY"
 
     def test_all_elements_are_strings(self):
-        argv = schtasks_command("SaveYourShit", "syt run", "daily")
+        argv = schtasks_command("ColdStorage", "cold run", "daily")
         assert all(isinstance(part, str) for part in argv)
 
     def test_manual_raises(self):
         with pytest.raises(ValueError, match="manual"):
-            schtasks_command("SaveYourShit", "syt run", "manual")
+            schtasks_command("ColdStorage", "cold run", "manual")
 
 
 # ---------------------------------------------------------------- install/uninstall
@@ -201,31 +201,31 @@ class TestSchtasksCommand:
 class TestInstallMacos:
     def test_writes_plist_into_injected_dir(self, tmp_path):
         path = install_macos(
-            "com.saveyourshit.backup", ["/usr/local/bin/syt", "run"], 86400, plist_dir=tmp_path
+            "com.coldstorage.backup", ["/usr/local/bin/cold", "run"], 86400, plist_dir=tmp_path
         )
-        assert path == tmp_path / "com.saveyourshit.backup.plist"
+        assert path == tmp_path / "com.coldstorage.backup.plist"
         assert path.is_file()
         data = plistlib.loads(path.read_bytes())
-        assert data["ProgramArguments"] == ["/usr/local/bin/syt", "run"]
+        assert data["ProgramArguments"] == ["/usr/local/bin/cold", "run"]
         assert data["StartInterval"] == 86400
 
     def test_creates_missing_directory(self, tmp_path):
         target = tmp_path / "nested" / "LaunchAgents"
-        path = install_macos("com.saveyourshit.backup", ["syt"], 60, plist_dir=target)
+        path = install_macos("com.coldstorage.backup", ["cold"], 60, plist_dir=target)
         assert path.is_file()
         assert path.parent == target
 
     def test_overwrites_existing_plist(self, tmp_path):
-        install_macos("com.saveyourshit.backup", ["syt", "old"], 60, plist_dir=tmp_path)
-        path = install_macos("com.saveyourshit.backup", ["syt", "new"], 120, plist_dir=tmp_path)
+        install_macos("com.coldstorage.backup", ["cold", "old"], 60, plist_dir=tmp_path)
+        path = install_macos("com.coldstorage.backup", ["cold", "new"], 120, plist_dir=tmp_path)
         data = plistlib.loads(path.read_bytes())
-        assert data["ProgramArguments"] == ["syt", "new"]
+        assert data["ProgramArguments"] == ["cold", "new"]
         assert data["StartInterval"] == 120
 
     def test_uninstall_removes_file(self, tmp_path):
-        path = install_macos("com.saveyourshit.backup", ["syt"], 60, plist_dir=tmp_path)
-        assert uninstall_macos("com.saveyourshit.backup", plist_dir=tmp_path) is True
+        path = install_macos("com.coldstorage.backup", ["cold"], 60, plist_dir=tmp_path)
+        assert uninstall_macos("com.coldstorage.backup", plist_dir=tmp_path) is True
         assert not path.exists()
 
     def test_uninstall_missing_returns_false(self, tmp_path):
-        assert uninstall_macos("com.saveyourshit.nothere", plist_dir=tmp_path) is False
+        assert uninstall_macos("com.coldstorage.nothere", plist_dir=tmp_path) is False

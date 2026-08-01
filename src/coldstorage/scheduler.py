@@ -1,8 +1,8 @@
-"""Scheduling logic for periodic ``syt`` runs — pure functions plus OS artifact generators.
+"""Scheduling logic for periodic ``cold`` runs — pure functions plus OS artifact generators.
 
 This module never requires a running daemon. It computes when a backup is due
 (:func:`next_run`, :func:`is_due`) and generates the OS-native artifacts that make the
-platform's own scheduler invoke ``syt``:
+platform's own scheduler invoke ``cold``:
 
 - macOS: a launchd agent plist (:func:`launchd_plist`, :func:`install_macos`)
 - Linux: a crontab line (:func:`cron_line`)
@@ -32,7 +32,7 @@ __all__ = [
     "uninstall_macos",
 ]
 
-#: Recognized schedule names. "manual" means the user runs ``syt`` themselves.
+#: Recognized schedule names. "manual" means the user runs ``cold`` themselves.
 SCHEDULES: frozenset[str] = frozenset({"daily", "weekly", "manual"})
 
 _INTERVALS: dict[str, timedelta] = {
@@ -98,8 +98,8 @@ def launchd_plist(label: str, program_args: list[str], interval_seconds: int) ->
     after load, not immediately.
 
     Args:
-        label: Reverse-DNS launchd label, e.g. ``"com.saveyourshit.backup"``.
-        program_args: Full argv to execute, e.g. ``["/usr/local/bin/syt", "run"]``.
+        label: Reverse-DNS launchd label, e.g. ``"com.coldstorage.backup"``.
+        program_args: Full argv to execute, e.g. ``["/usr/local/bin/cold", "run"]``.
         interval_seconds: Seconds between runs; must be positive.
 
     Raises:

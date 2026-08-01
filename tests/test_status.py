@@ -1,9 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
-from saveyourshit.config import Config, ConnectorConfig
-from saveyourshit.engine import Engine
-from saveyourshit.status import compute_status, human_bytes, is_stale
-from saveyourshit.store.archive import Archive
+from coldstorage.config import Config, ConnectorConfig
+from coldstorage.engine import Engine
+from coldstorage.status import compute_status, human_bytes, is_stale
+from coldstorage.store.archive import Archive
 
 
 def test_is_stale_never_run():

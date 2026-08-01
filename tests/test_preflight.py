@@ -1,4 +1,4 @@
-from saveyourshit.preflight import check_export
+from coldstorage.preflight import check_export
 
 
 def test_check_recognizes_instagram(instagram_export):

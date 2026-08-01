@@ -1,9 +1,9 @@
-"""``syt`` — the command-line interface. Designed to be dead simple:
+"""``cold`` — the command-line interface. Designed to be dead simple:
 
-    syt init            # one-time setup (folder, passphrase, recovery kit)
-    syt ingest <path>   # back up a downloaded export (auto-detects platform)
-    syt status          # where's my data, what's backed up, what's stale
-    syt search <query>  # full-text search across everything
+    cold init            # one-time setup (folder, passphrase, recovery kit)
+    cold ingest <path>   # back up a downloaded export (auto-detects platform)
+    cold status          # where's my data, what's backed up, what's stale
+    cold search <query>  # full-text search across everything
 """
 
 from __future__ import annotations
@@ -37,17 +37,17 @@ err = Console(stderr=True)
 #: Machine-readable marker on the "I can't read this export" failure. The app
 #: keys off it to stop retrying — re-reading the same unreadable file cannot
 #: start working, so it is a permanent failure, not a transient one.
-UNRECOGNIZED_MARKER = "SYT_UNRECOGNIZED_EXPORT"
+UNRECOGNIZED_MARKER = "COLD_UNRECOGNIZED_EXPORT"
 
 
 def _fail_unrecognized(path: Path, exc: Exception) -> None:
-    """Explain an unrecognized export the way `syt check` does, then exit."""
+    """Explain an unrecognized export the way `cold check` does, then exit."""
     from .preflight import unrecognized_reasons
 
     err.print(f"[red]✗[/] Could not read this export: [bold]{path.name}[/]")
     for reason in unrecognized_reasons(path):
         err.print(f"  • {reason}")
-    err.print(f"\n[dim]Run `syt check {path}` for a full report.[/]")
+    err.print(f"\n[dim]Run `cold check {path}` for a full report.[/]")
     err.print(f"[dim]{UNRECOGNIZED_MARKER}: {exc}[/]")
     raise typer.Exit(2)
 
@@ -69,7 +69,7 @@ def init(
         None, help="Encryption passphrase (prompted if omitted)."
     ),
     no_encrypt: bool = typer.Option(False, "--no-encrypt", help="Store data unencrypted."),
-    home: Path | None = typer.Option(None, help="Backup folder (default ~/SaveYourShit)."),
+    home: Path | None = typer.Option(None, help="Backup folder (default ~/ColdStorage)."),
 ) -> None:
     """One-time setup: choose a folder, set a passphrase, save your Recovery Kit."""
     layout = Layout(home)
@@ -103,8 +103,8 @@ def init(
             f"[bold green]You're set up.[/]\n\n"
             f"Your data lives in:\n  [bold]{layout.home}[/]\n\n"
             f"Next: download an export from any platform and run\n"
-            f"  [bold]syt ingest ~/Downloads/your-export.zip[/]",
-            title="Save Your Shit",
+            f"  [bold]cold ingest ~/Downloads/your-export.zip[/]",
+            title="Cold Storage",
         )
     )
 
@@ -238,7 +238,7 @@ def check(
     for warn in result.warnings:
         err.print(f"  [yellow]⚠ {warn}[/]")
     if not result.warnings:
-        console.print("[dim]Looks good. Run `syt ingest` to back it up.[/]")
+        console.print("[dim]Looks good. Run `cold ingest` to back it up.[/]")
 
 
 @app.command()
@@ -290,11 +290,11 @@ def status(
     if st.connectors:
         console.print(table)
     else:
-        console.print("[dim]Nothing backed up yet. Try `syt ingest <export>`.[/]")
+        console.print("[dim]Nothing backed up yet. Try `cold ingest <export>`.[/]")
     if st.any_stale:
         console.print(
             "\n[yellow]⚠ Some backups are stale (>7 days).[/] "
-            "Download a fresh export and run `syt ingest`."
+            "Download a fresh export and run `cold ingest`."
         )
 
 
@@ -353,7 +353,7 @@ def serve(
 
     rt = _runtime(passphrase)
     url = f"http://{host}:{port}/"
-    console.print(f"[green]✓[/] Save Your Shit is running at [bold]{url}[/]")
+    console.print(f"[green]✓[/] Cold Storage is running at [bold]{url}[/]")
     console.print("[dim]Loopback only — nothing leaves your machine. Ctrl-C to stop.[/]")
     with rt.open_archive() as archive:
         serve_app(archive, rt.config, host=host, port=port, open_browser=open_browser)
@@ -384,7 +384,7 @@ def where(connector: str | None = typer.Argument(None)) -> None:
     """Print exactly where your data is stored on disk."""
     layout = Layout()
     if not layout.exists():
-        _fail("not initialized — run `syt init` first")
+        _fail("not initialized — run `cold init` first")
     # plain output (no Rich wrapping) so paths stay copy-pasteable
     if connector:
         typer.echo(str(layout.connector_dir(connector)))
@@ -451,7 +451,7 @@ def recover(
 @app.command()
 def sync(
     remote: str | None = typer.Option(
-        None, help="rclone remote to mirror to, e.g. b2:my-bucket/syt (default: config)."
+        None, help="rclone remote to mirror to, e.g. b2:my-bucket/cold (default: config)."
     ),
     repo: Path | None = typer.Option(None, help="restic repo location (default: alongside home)."),
     init_repo: bool = typer.Option(False, "--init", help="Initialize the restic repo first."),
@@ -484,7 +484,7 @@ def sync(
             with console.status("Initializing restic repo…"):
                 restic.init(restic_pw)
         with console.status("Snapshotting your archive…"):
-            res = restic.snapshot([rt.layout.home], restic_pw, tags=["syt"])
+            res = restic.snapshot([rt.layout.home], restic_pw, tags=["cold"])
         if not res.ok:
             _fail(f"restic backup failed: {res.stderr.strip()[:400]}")
         console.print("[green]✓[/] Local encrypted snapshot done.")
@@ -526,10 +526,10 @@ def schedule(
 
     from . import scheduler
 
-    label = "com.saveyourshit.reminder"
-    syt_path = shutil.which("syt") or f"{sys.executable} -m saveyourshit"
-    plist_dir = Path(os.environ["SYT_LAUNCHAGENTS_DIR"]) if os.environ.get(
-        "SYT_LAUNCHAGENTS_DIR"
+    label = "com.coldstorage.reminder"
+    syt_path = shutil.which("cold") or f"{sys.executable} -m coldstorage"
+    plist_dir = Path(os.environ["COLD_LAUNCHAGENTS_DIR"]) if os.environ.get(
+        "COLD_LAUNCHAGENTS_DIR"
     ) else None
 
     if remove:
@@ -537,7 +537,7 @@ def schedule(
             removed = scheduler.uninstall_macos(label, plist_dir=plist_dir)
             console.print("[green]✓[/] Removed." if removed else "[dim]Nothing to remove.[/]")
         else:
-            console.print("Remove the cron/Task Scheduler entry you added for `syt status`.")
+            console.print("Remove the cron/Task Scheduler entry you added for `cold status`.")
         return
 
     if every not in ("daily", "weekly"):
@@ -590,7 +590,7 @@ def doctor() -> None:
 
         checks.append(("OS keychain library", True, "installed"))
     except ImportError:
-        checks.append(("OS keychain library", False, "pip install saveyourshit[keyring]"))
+        checks.append(("OS keychain library", False, "pip install coldstorage[keyring]"))
 
     for name, ok, note in checks:
         mark = "[green]✓[/]" if ok else "[yellow]○[/]"

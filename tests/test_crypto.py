@@ -1,7 +1,7 @@
 import pytest
 
-from saveyourshit.crypto import KeyManager, RecoveryKit
-from saveyourshit.crypto.keys import KeyError_
+from coldstorage.crypto import KeyManager, RecoveryKit
+from coldstorage.crypto.keys import KeyError_
 
 
 def test_encrypt_decrypt_roundtrip(tmp_path):

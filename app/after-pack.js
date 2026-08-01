@@ -1,18 +1,18 @@
 // electron-builder afterPack hook: sign the bundled Python engine.
 //
-// electron-builder signs the app bundle itself, but the PyInstaller `syt`
+// electron-builder signs the app bundle itself, but the PyInstaller `cold`
 // bundle we drop into Resources/ contains its own Mach-O binaries and dylibs.
 // Those must be signed *before* the outer bundle is sealed (inside-out order),
 // with the hardened runtime and entitlements, or notarization rejects the app.
 //
-// With no Developer ID (SYT_SIGN_IDENTITY unset) we fall back to an ad-hoc
+// With no Developer ID (COLD_SIGN_IDENTITY unset) we fall back to an ad-hoc
 // signature: enough for a locally-built app to run, not enough to distribute.
 
 const { execFileSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const IDENTITY = process.env.SYT_SIGN_IDENTITY || null;
+const IDENTITY = process.env.COLD_SIGN_IDENTITY || null;
 
 function isMachO(file) {
   try {
@@ -41,7 +41,7 @@ module.exports = async function afterPack(context) {
 
   const appName = `${context.packager.appInfo.productFilename}.app`;
   const appPath = path.join(context.appOutDir, appName);
-  const engineDir = path.join(appPath, "Contents", "Resources", "syt");
+  const engineDir = path.join(appPath, "Contents", "Resources", "cold");
   const entitlements = path.join(__dirname, "entitlements.mac.plist");
 
   if (fs.existsSync(engineDir)) {
