@@ -60,7 +60,7 @@ class Config:
 
     def to_toml(self) -> str:
         lines: list[str] = [
-            "# Save Your Shit configuration",
+            "# Cold Storage configuration",
             "# Everything is local. This file never leaves your machine.",
             f"version = {self.version}",
             f"encrypt = {_toml_bool(self.encrypt)}",

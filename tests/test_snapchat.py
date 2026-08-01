@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from saveyourshit.connectors.snapchat import SnapchatConnector
-from saveyourshit.models import RecordType
+from coldstorage.connectors.snapchat import SnapchatConnector
+from coldstorage.models import RecordType
 
 
 def _write(root, name, payload):

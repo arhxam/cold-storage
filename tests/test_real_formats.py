@@ -10,10 +10,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from saveyourshit.connectors.base import detect_connector
-from saveyourshit.connectors.facebook import FacebookConnector
-from saveyourshit.connectors.instagram import InstagramConnector
-from saveyourshit.models import RecordType
+from coldstorage.connectors.base import detect_connector
+from coldstorage.connectors.facebook import FacebookConnector
+from coldstorage.connectors.instagram import InstagramConnector
+from coldstorage.models import RecordType
 
 
 def _w(p: Path, obj) -> None:

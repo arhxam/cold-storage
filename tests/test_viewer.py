@@ -1,6 +1,6 @@
-from saveyourshit.engine import Engine
-from saveyourshit.store.archive import Archive
-from saveyourshit.viewer import build_viewer
+from coldstorage.engine import Engine
+from coldstorage.store.archive import Archive
+from coldstorage.viewer import build_viewer
 
 
 def test_build_viewer_is_self_contained(layout, instagram_export):
@@ -18,7 +18,7 @@ def test_build_viewer_is_self_contained(layout, instagram_export):
 
 
 def test_viewer_neutralizes_script_injection(layout):
-    from saveyourshit.models import Batch, NormalizedRecord, RecordType
+    from coldstorage.models import Batch, NormalizedRecord, RecordType
 
     with Archive(layout) as arc:
         arc.ingest_batch(

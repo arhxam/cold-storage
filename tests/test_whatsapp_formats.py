@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from saveyourshit.connectors.whatsapp import WhatsAppConnector
+from coldstorage.connectors.whatsapp import WhatsAppConnector
 
 
 def _collect(root: Path):

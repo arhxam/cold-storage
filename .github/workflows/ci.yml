@@ -16,8 +16,8 @@ jobs:
         python: ["3.11", "3.12"]
     env:
       # never touch a real OS keychain in CI
-      SYT_NO_KEYRING: "1"
-      SYT_SCRYPT_N: "1024"
+      COLD_NO_KEYRING: "1"
+      COLD_SCRYPT_N: "1024"
     steps:
       - uses: actions/checkout@v4
       - name: Install uv

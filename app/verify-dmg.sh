@@ -44,7 +44,7 @@ fi
 ok "disk image mounts"
 trap 'hdiutil detach "$MNT" -quiet >/dev/null 2>&1' EXIT
 
-APP="$MNT/Save Your Shit.app"
+APP="$MNT/Cold Storage.app"
 echo
 echo "App bundle"
 check "present"                     "[ -d '$APP' ]"
@@ -61,7 +61,7 @@ contains "Gatekeeper accepts it (no right-click needed)" "accepted" \
 
 echo
 echo "Bundled engine"
-ENGINE="$APP/Contents/Resources/syt/syt"
+ENGINE="$APP/Contents/Resources/cold/cold"
 check "present and executable"   "[ -x '$ENGINE' ]"
 check "signed"                   "codesign --verify --strict '$ENGINE'"
 if [ -x "$ENGINE" ]; then

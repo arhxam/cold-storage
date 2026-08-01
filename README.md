@@ -1,24 +1,25 @@
 <div align="center">
 
-<img src="assets/logo/save-your-shit-mark-256.png" alt="Save Your Shit" width="112" height="112">
+<img src="assets/logo/cold-storage-mark-256.png" alt="Cold Storage" width="112" height="112">
 
-# Save Your Shit
+# Cold Storage
 
-**Automatic, encrypted backups of your own social-media data — on your Mac, not a server.**
+**A cold copy of your social media. On your machine, not their servers.**
 
-Connect an account once. It requests your official export, downloads it, and files it
-away on a schedule. Instagram, Facebook, X, Google, Snapchat, LinkedIn, Reddit — plus
-Discord, Telegram, WhatsApp and Slack by hand.
+Connect an account once. It requests your official export, downloads it, and keeps an
+encrypted, searchable copy on your Mac — on a schedule, in the background, forever.
+Instagram, Facebook, X, Google, Snapchat, LinkedIn and Reddit automatically; Discord,
+Telegram, WhatsApp and Slack by hand.
 
-<a href="https://github.com/arhxam/save-your-shit/releases/latest/download/SaveYourShit-macOS-arm64.dmg"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Mac-Apple%20Silicon%20·%20free-0a84ff?style=for-the-badge&logoColor=white" alt="Download Save Your Shit for Mac" height="46"></a>
+<a href="https://github.com/arhxam/cold-storage/releases/latest/download/ColdStorage-macOS-arm64.dmg"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Mac-Apple%20Silicon%20·%20free-0a84ff?style=for-the-badge&logoColor=white" alt="Download Cold Storage for Mac" height="46"></a>
 
 <sub>**Signed and notarized by Apple.** Open the DMG, drag to Applications, done.<br>
 No Terminal, no right-click workaround, no security warning.</sub>
 
 <br><br>
 
-<a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/github/v/release/arhxam/save-your-shit?label=latest&color=0a84ff" alt="Latest release"></a>
-<a href="https://github.com/arhxam/save-your-shit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arhxam/save-your-shit/ci.yml?branch=master&label=tests" alt="Tests"></a>
+<a href="https://github.com/arhxam/cold-storage/releases/latest"><img src="https://img.shields.io/github/v/release/arhxam/cold-storage?label=latest&color=0a84ff" alt="Latest release"></a>
+<a href="https://github.com/arhxam/cold-storage/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arhxam/cold-storage/ci.yml?branch=master&label=tests" alt="Tests"></a>
 <img src="https://img.shields.io/badge/macOS-13%2B%20(Apple%20Silicon)-999" alt="macOS 13+ Apple Silicon">
 <img src="https://img.shields.io/badge/license-MIT-999" alt="MIT licensed">
 <img src="https://img.shields.io/badge/servers-none-2ea043" alt="No servers">
@@ -31,19 +32,19 @@ No Terminal, no right-click workaround, no security warning.</sub>
 
 ## Install
 
-**Mac app — [⬇ Download the DMG](https://github.com/arhxam/save-your-shit/releases/latest/download/SaveYourShit-macOS-arm64.dmg)** (Apple Silicon, ~110 MB)
+**Mac app — [⬇ Download the DMG](https://github.com/arhxam/cold-storage/releases/latest/download/ColdStorage-macOS-arm64.dmg)** (Apple Silicon, ~110 MB)
 
-Open it, drag **Save Your Shit** to Applications, and open it from there. It's
+Open it, drag **Cold Storage** to Applications, and open it from there. It's
 signed and notarized, so it just opens — no right-click, no warning. On first
 launch it sets up your encrypted archive and puts a Recovery Kit on your Desktop.
 
 **Command line** — same engine, any platform with Python:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/arhxam/save-your-shit/master/install.sh | sh
+curl -LsSf https://raw.githubusercontent.com/arhxam/cold-storage/master/install.sh | sh
 ```
 
-<sub>Prefer to inspect first? [Read the installer](install.sh) · [all downloads](https://github.com/arhxam/save-your-shit/releases/latest) · Windows and Linux app builds aren't ready yet.</sub>
+<sub>Prefer to inspect first? [Read the installer](install.sh) · [all downloads](https://github.com/arhxam/cold-storage/releases/latest) · Windows and Linux app builds aren't ready yet.</sub>
 
 ## Why
 
@@ -51,9 +52,11 @@ Platforms can ban an account with no warning and no chance to export. When that
 happens you lose everything — chats, photos, the people you followed — and the
 "Download your data" button stops working too. **The backup has to already exist.**
 
-This turns the data exports you're legally entitled to into an encrypted, searchable
-archive you own forever. It uses your official export rights, not scraping that could
-get you banned — the very thing you're insuring against.
+Cold storage is what you call the copy you keep offline, out of reach, for the day the
+live system fails. That's what this is: a **second layer** underneath accounts you
+don't control, built from the exports you're legally entitled to. It uses your
+official export rights — not scraping, which could get you banned, which is the very
+thing you're insuring against.
 
 ## How it works
 
@@ -113,7 +116,7 @@ schedule fire. Quit it from there to stop entirely.
 Everything lives in one folder you can back up anywhere:
 
 ```
-~/SaveYourShit/
+~/ColdStorage/
 ├── index.sqlite      # full-text search index
 ├── blobs/            # your photos & videos — AES-256 encrypted, deduplicated
 ├── instagram/
@@ -131,7 +134,7 @@ gets nothing; someone already logged in as you can read your message text. Full
 at-rest encryption of the index is on the roadmap. We'd rather say this plainly
 than let you assume more than is true.
 
-Cloud sync (`syt sync`) is different — that goes out through restic, encrypted
+Cloud sync (`cold sync`) is different — that goes out through restic, encrypted
 end-to-end, so your cloud provider only ever sees ciphertext.
 
 **Save your Recovery Kit.** It's shown once at setup, and the Mac app writes it to
@@ -142,44 +145,44 @@ machine, it is the only way back in. There is no reset link — that's the point
 
 ## Command line
 
-Everything the app does, `syt` does too:
+Everything the app does, `cold` does too:
 
 ```bash
-syt init                              # set up, save your Recovery Kit
-syt ingest ~/Downloads/export.zip     # back up an export (auto-detects the platform)
-syt ingest ~/Downloads --all          # sweep a whole folder; safe to re-run
-syt serve                             # open the app in your browser
-syt status                            # what's backed up, and what's gone stale
-syt search "that thing we talked about"
+cold init                              # set up, save your Recovery Kit
+cold ingest ~/Downloads/export.zip     # back up an export (auto-detects the platform)
+cold ingest ~/Downloads --all          # sweep a whole folder; safe to re-run
+cold serve                             # open the app in your browser
+cold status                            # what's backed up, and what's gone stale
+cold search "that thing we talked about"
 ```
 
 | Command | What it does |
 |---------|--------------|
-| `syt check <path>` | Dry run: show what it found, write nothing. |
-| `syt view` | Build a single-file offline HTML viewer. |
-| `syt sync` | Encrypted versioned backup (restic) + mirror to your own cloud (rclone). |
-| `syt where` | Print exactly where every file lives. |
-| `syt doctor` | Check your setup. |
-| `syt passphrase` / `syt recover` | Change or recover your passphrase. |
+| `cold check <path>` | Dry run: show what it found, write nothing. |
+| `cold view` | Build a single-file offline HTML viewer. |
+| `cold sync` | Encrypted versioned backup (restic) + mirror to your own cloud (rclone). |
+| `cold where` | Print exactly where every file lives. |
+| `cold doctor` | Check your setup. |
+| `cold passphrase` / `cold recover` | Change or recover your passphrase. |
 
-Run `syt --help` for everything.
+Run `cold --help` for everything.
 
 ## Try it with sample data
 
 See it before touching a real account:
 
 ```bash
-git clone https://github.com/arhxam/save-your-shit && cd save-your-shit
+git clone https://github.com/arhxam/cold-storage && cd cold-storage
 uv sync --extra keyring
-export SYT_HOME=/tmp/syt-demo          # throwaway, leaves your real archive alone
+export COLD_HOME=/tmp/cold-demo          # throwaway, leaves your real archive alone
 
 mkdir -p /tmp/ig/your_instagram_activity/messages/inbox/maya
 printf '{"title":"Maya","messages":[{"sender_name":"Maya","timestamp_ms":1701000000000,"content":"did you see the sunset photos??"}]}' \
   > /tmp/ig/your_instagram_activity/messages/inbox/maya/message_1.json
 
-uv run syt init --no-encrypt
-uv run syt ingest /tmp/ig
-uv run syt serve                       # http://127.0.0.1:8787
+uv run cold init --no-encrypt
+uv run cold ingest /tmp/ig
+uv run cold serve                       # http://127.0.0.1:8787
 ```
 
 ## Development
@@ -199,13 +202,13 @@ npm run dist                   # build an unsigned DMG
 ```
 
 `publish.sh` uploads the disk image twice: once under its versioned name, and
-once as `SaveYourShit-macOS-arm64.dmg`. That second name is what the download
+once as `ColdStorage-macOS-arm64.dmg`. That second name is what the download
 button at the top of this page points at, through
 `/releases/latest/download/…` — a URL that keeps working across every future
 release. Publishing by hand and forgetting it silently 404s the button.
 
 Building the Mac app bundles a frozen copy of the engine — rebuild it with
-`cd packaging && uv run pyinstaller syt.spec --noconfirm --distpath ../dist` after
+`cd packaging && uv run pyinstaller cold.spec --noconfirm --distpath ../dist` after
 changing anything in `src/`. See [docs/BUILDING-APP.md](docs/BUILDING-APP.md).
 
 ## Roadmap

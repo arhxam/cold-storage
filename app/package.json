@@ -1,11 +1,11 @@
 {
-  "name": "save-your-shit",
-  "productName": "Save Your Shit",
+  "name": "cold-storage",
+  "productName": "Cold Storage",
   "version": "0.3.1",
   "description": "Local-first backup for your own social-media data. No server.",
   "main": "main.js",
   "license": "MIT",
-  "author": "Save Your Shit contributors",
+  "author": "Cold Storage contributors",
   "scripts": {
     "start": "electron .",
     "test": "node test/reliability.test.js && electron test/automation.test.js",
@@ -16,9 +16,9 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.saveyourshit.app",
+    "appId": "com.coldstorage.app",
     "afterPack": "./after-pack.js",
-    "productName": "Save Your Shit",
+    "productName": "Cold Storage",
     "files": [
       "main.js",
       "preload.js",
@@ -32,8 +32,8 @@
     ],
     "extraResources": [
       {
-        "from": "../dist/syt",
-        "to": "syt"
+        "from": "../dist/cold",
+        "to": "cold"
       }
     ],
     "mac": {

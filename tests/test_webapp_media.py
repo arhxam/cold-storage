@@ -9,9 +9,9 @@ import json
 
 import pytest
 
-from saveyourshit.config import Config
-from saveyourshit.store.archive import Archive
-from saveyourshit.webapp import _sniff_media_type, handle
+from coldstorage.config import Config
+from coldstorage.store.archive import Archive
+from coldstorage.webapp import _sniff_media_type, handle
 
 PNG = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
@@ -79,7 +79,7 @@ def test_html_and_svg_are_never_served_as_markup(layout):
 
 def test_media_hashes_reach_the_thread_api(layout):
     """A message's attachments must survive into what the UI reads."""
-    from saveyourshit.models import NormalizedRecord, RecordType
+    from coldstorage.models import NormalizedRecord, RecordType
 
     with Archive(layout) as arc:
         sha = arc.blobs.put_bytes(PNG)

@@ -1,12 +1,12 @@
 #!/bin/bash
-# Build a signed + notarized Save Your Shit DMG for distribution.
+# Build a signed + notarized Cold Storage DMG for distribution.
 #
 #   ./app/release.sh
 #
 # Requires (one-time setup, see docs/BUILDING-APP.md):
 #   • a "Developer ID Application" certificate in the login keychain
 #   • a notarytool keychain profile:
-#       xcrun notarytool store-credentials "syt-notary" \
+#       xcrun notarytool store-credentials "cold-notary" \
 #         --key ~/.appstoreconnect/private_keys/AuthKey_XXXX.p8 \
 #         --key-id XXXX --issuer <issuer-uuid>
 #
@@ -16,9 +16,9 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-PROFILE="${SYT_NOTARY_PROFILE:-syt-notary}"
+PROFILE="${COLD_NOTARY_PROFILE:-cold-notary}"
 
-IDENTITY="${SYT_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
+IDENTITY="${COLD_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
   | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -1)}"
 if [ -z "$IDENTITY" ]; then
   echo "error: no 'Developer ID Application' certificate found." >&2
@@ -26,12 +26,12 @@ if [ -z "$IDENTITY" ]; then
 fi
 echo "→ signing identity: $IDENTITY"
 
-export SYT_SIGN_IDENTITY="$IDENTITY"
+export COLD_SIGN_IDENTITY="$IDENTITY"
 # electron-builder picks the cert itself and rejects the "Developer ID
 # Application:" prefix — it wants just the common name.
 export CSC_NAME="${IDENTITY#Developer ID Application: }"
 
-APP="release/mac-arm64/Save Your Shit.app"
+APP="release/mac-arm64/Cold Storage.app"
 
 # Two passes on purpose.
 #

@@ -7,32 +7,32 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("sytBridge", {
+contextBridge.exposeInMainWorld("coldBridge", {
   isElectron: true,
 
   // Native "pick a file/folder and back it up" flow. Detection is automatic.
-  addExport: () => ipcRenderer.invoke("syt:pickAndIngest"),
+  addExport: () => ipcRenderer.invoke("cold:pickAndIngest"),
 
   // Open a platform's official data-download page in the user's real browser.
-  openExternal: (url) => ipcRenderer.invoke("syt:openExternal", url),
+  openExternal: (url) => ipcRenderer.invoke("cold:openExternal", url),
 
   // Reveal the local data folder in Finder.
-  revealDataFolder: () => ipcRenderer.invoke("syt:revealDataFolder"),
+  revealDataFolder: () => ipcRenderer.invoke("cold:revealDataFolder"),
 
   // Open the Recovery Kit file.
-  showRecoveryKit: () => ipcRenderer.invoke("syt:showRecoveryKit"),
+  showRecoveryKit: () => ipcRenderer.invoke("cold:showRecoveryKit"),
 
   // --- accounts & automation ------------------------------------------------
   // Sign in once per platform; after that the app requests, downloads and
   // ingests official exports on a schedule with no further input.
-  accounts: () => ipcRenderer.invoke("syt:accounts"),
-  connect: (id) => ipcRenderer.invoke("syt:connect", id),
-  disconnect: (id) => ipcRenderer.invoke("syt:disconnect", id),
-  setSchedule: (id, schedule) => ipcRenderer.invoke("syt:setSchedule", id, schedule),
-  syncNow: (id) => ipcRenderer.invoke("syt:syncNow", id),
-  syncAll: () => ipcRenderer.invoke("syt:syncAll"),
-  getPrefs: () => ipcRenderer.invoke("syt:getPrefs"),
-  setPref: (key, value) => ipcRenderer.invoke("syt:setPref", key, value),
+  accounts: () => ipcRenderer.invoke("cold:accounts"),
+  connect: (id) => ipcRenderer.invoke("cold:connect", id),
+  disconnect: (id) => ipcRenderer.invoke("cold:disconnect", id),
+  setSchedule: (id, schedule) => ipcRenderer.invoke("cold:setSchedule", id, schedule),
+  syncNow: (id) => ipcRenderer.invoke("cold:syncNow", id),
+  syncAll: () => ipcRenderer.invoke("cold:syncAll"),
+  getPrefs: () => ipcRenderer.invoke("cold:getPrefs"),
+  setPref: (key, value) => ipcRenderer.invoke("cold:setPref", key, value),
 
   // Subscribe to backup progress: cb({ phase: 'start'|'done'|'error', ... }).
   // Returns an unsubscribe function.
@@ -44,8 +44,8 @@ contextBridge.exposeInMainWorld("sytBridge", {
         /* ignore renderer callback errors */
       }
     };
-    ipcRenderer.on("syt:ingest", listener);
-    return () => ipcRenderer.removeListener("syt:ingest", listener);
+    ipcRenderer.on("cold:ingest", listener);
+    return () => ipcRenderer.removeListener("cold:ingest", listener);
   },
 
   // Live account-state pushes (connect, sync progress, schedule changes).
@@ -57,7 +57,7 @@ contextBridge.exposeInMainWorld("sytBridge", {
         /* ignore renderer callback errors */
       }
     };
-    ipcRenderer.on("syt:accounts", listener);
-    return () => ipcRenderer.removeListener("syt:accounts", listener);
+    ipcRenderer.on("cold:accounts", listener);
+    return () => ipcRenderer.removeListener("cold:accounts", listener);
   },
 });

@@ -189,7 +189,7 @@ app.whenReady().then(async () => {
   console.log("\nConnect flow (opens a real sign-in window, signs in to nothing)");
   const patched = {};
   automation.init({
-    sytHome: () => require("os").tmpdir(),
+    coldHome: () => require("os").tmpdir(),
     ingest: async () => true,
     getAccount: () => ({ connected: false, schedule: "manual" }),
     patchAccount: (id, p) => Object.assign((patched[id] = patched[id] || {}), p),

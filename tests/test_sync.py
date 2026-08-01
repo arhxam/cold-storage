@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from saveyourshit.sync import RcloneRemote, ResticRepo, RunResult, SyncToolMissing
+from coldstorage.sync import RcloneRemote, ResticRepo, RunResult, SyncToolMissing
 
 
 class FakeRunner:
@@ -54,7 +54,7 @@ def runner() -> FakeRunner:
 
 @pytest.fixture
 def repo(tool_installed, runner) -> ResticRepo:
-    return ResticRepo("/backups/syt-repo", runner=runner)
+    return ResticRepo("/backups/cold-repo", runner=runner)
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def remote(tool_installed, runner) -> RcloneRemote:
 class TestResticArgv:
     def test_init(self, repo, runner):
         result = repo.init("hunter2")
-        assert runner.last_argv == ["restic", "--repo", "/backups/syt-repo", "init"]
+        assert runner.last_argv == ["restic", "--repo", "/backups/cold-repo", "init"]
         assert result.returncode == 0
         assert result.stdout == "ok"
         assert result.ok
@@ -79,9 +79,9 @@ class TestResticArgv:
         assert "hunter2" not in " ".join(runner.last_argv)
 
     def test_snapshot_single_path(self, repo, runner):
-        repo.snapshot(["/home/me/SaveYourShit"], "pw")
-        assert runner.last_argv[:4] == ["restic", "--repo", "/backups/syt-repo", "backup"]
-        assert runner.last_argv[-1] == "/home/me/SaveYourShit"
+        repo.snapshot(["/home/me/ColdStorage"], "pw")
+        assert runner.last_argv[:4] == ["restic", "--repo", "/backups/cold-repo", "backup"]
+        assert runner.last_argv[-1] == "/home/me/ColdStorage"
         assert runner.last_env == {"RESTIC_PASSWORD": "pw"}
 
     def test_snapshot_never_uploads_a_recovery_kit(self, repo, runner):
@@ -90,7 +90,7 @@ class TestResticArgv:
         Uploading it next to the ciphertext would hand the key to anyone who
         reached the remote, so it is excluded no matter what is being backed up.
         """
-        repo.snapshot(["/home/me/SaveYourShit"], "pw")
+        repo.snapshot(["/home/me/ColdStorage"], "pw")
         argv = runner.last_argv
         excluded = {argv[i + 1] for i, a in enumerate(argv) if a == "--exclude"}
         assert "RECOVERY-KIT.txt" in excluded
@@ -100,16 +100,16 @@ class TestResticArgv:
         repo.snapshot([Path("/data/a"), "/data/b"], "pw")
         # Path inputs are stringified to native separators (native paths are what
         # restic wants on Windows), so compare against str(Path(...)) for OS-agnosticism.
-        assert runner.last_argv[:4] == ["restic", "--repo", "/backups/syt-repo", "backup"]
+        assert runner.last_argv[:4] == ["restic", "--repo", "/backups/cold-repo", "backup"]
         assert runner.last_argv[-2:] == [str(Path("/data/a")), "/data/b"]
 
     def test_snapshot_with_tags(self, repo, runner):
-        repo.snapshot(["/data"], "pw", tags=["syt", "nightly"])
+        repo.snapshot(["/data"], "pw", tags=["cold", "nightly"])
         argv = runner.last_argv
-        assert argv[:4] == ["restic", "--repo", "/backups/syt-repo", "backup"]
+        assert argv[:4] == ["restic", "--repo", "/backups/cold-repo", "backup"]
         assert argv[-1] == "/data"
         tags = [argv[i + 1] for i, a in enumerate(argv) if a == "--tag"]
-        assert tags == ["syt", "nightly"]
+        assert tags == ["cold", "nightly"]
 
     def test_snapshot_no_tags_adds_no_tag_flags(self, repo, runner):
         repo.snapshot(["/data"], "pw", tags=None)
@@ -117,19 +117,19 @@ class TestResticArgv:
 
     def test_check(self, repo, runner):
         repo.check("pw")
-        assert runner.last_argv == ["restic", "--repo", "/backups/syt-repo", "check"]
+        assert runner.last_argv == ["restic", "--repo", "/backups/cold-repo", "check"]
         assert runner.last_env == {"RESTIC_PASSWORD": "pw"}
 
     def test_list_snapshots_requests_json(self, repo, runner):
         repo.list_snapshots("pw")
         assert runner.last_argv == [
-            "restic", "--repo", "/backups/syt-repo", "snapshots", "--json",
+            "restic", "--repo", "/backups/cold-repo", "snapshots", "--json",
         ]
 
     def test_restore(self, repo, runner):
         repo.restore("ab12cd34", Path("/tmp/restored"), "pw")
         assert runner.last_argv == [
-            "restic", "--repo", "/backups/syt-repo",
+            "restic", "--repo", "/backups/cold-repo",
             "restore", "ab12cd34", "--target", str(Path("/tmp/restored")),
         ]
         assert runner.last_env == {"RESTIC_PASSWORD": "pw"}
@@ -144,9 +144,9 @@ class TestResticArgv:
         assert runner.last_argv == ["restic", "--repo", str(Path("/somewhere/repo")), "init"]
 
     def test_custom_binary_used_in_argv(self, tool_installed, runner):
-        repo = ResticRepo("/r", binary="/opt/syt/bin/restic", runner=runner)
+        repo = ResticRepo("/r", binary="/opt/cold/bin/restic", runner=runner)
         repo.check("pw")
-        assert runner.last_argv[0] == "/opt/syt/bin/restic"
+        assert runner.last_argv[0] == "/opt/cold/bin/restic"
 
     def test_result_is_passed_through_from_runner(self, tool_installed):
         canned = RunResult(returncode=1, stdout="", stderr="repo locked")
@@ -161,9 +161,9 @@ class TestResticArgv:
 
 class TestRcloneArgv:
     def test_sync(self, remote, runner):
-        result = remote.sync("/home/me/SaveYourShit", "b2:my-bucket/syt")
+        result = remote.sync("/home/me/ColdStorage", "b2:my-bucket/cold")
         assert runner.last_argv == [
-            "rclone", "sync", "/home/me/SaveYourShit", "b2:my-bucket/syt",
+            "rclone", "sync", "/home/me/ColdStorage", "b2:my-bucket/cold",
         ]
         assert runner.last_env is None
         assert result.ok
@@ -173,17 +173,17 @@ class TestRcloneArgv:
         assert runner.last_argv == ["rclone", "sync", str(Path("/data/archive")), "drive:backups"]
 
     def test_copy(self, remote, runner):
-        remote.copy("/data/archive", "dropbox:syt")
-        assert runner.last_argv == ["rclone", "copy", "/data/archive", "dropbox:syt"]
+        remote.copy("/data/archive", "dropbox:cold")
+        assert runner.last_argv == ["rclone", "copy", "/data/archive", "dropbox:cold"]
 
     def test_list_remotes(self, remote, runner):
         remote.list_remotes()
         assert runner.last_argv == ["rclone", "listremotes"]
 
     def test_custom_binary_used_in_argv(self, tool_installed, runner):
-        remote = RcloneRemote(binary="/opt/syt/bin/rclone", runner=runner)
+        remote = RcloneRemote(binary="/opt/cold/bin/rclone", runner=runner)
         remote.list_remotes()
-        assert runner.last_argv[0] == "/opt/syt/bin/rclone"
+        assert runner.last_argv[0] == "/opt/cold/bin/rclone"
 
 
 # -- missing binaries --------------------------------------------------------

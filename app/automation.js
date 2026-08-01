@@ -8,7 +8,7 @@
 //   2. runSync(id)  — a hidden window loads the platform's official export
 //      page in that same session and:
 //        a. if an archive is ready  -> clicks Download; the file is captured,
-//           handed to `syt ingest`, and lands in the local encrypted archive;
+//           handed to `cold ingest`, and lands in the local encrypted archive;
 //        b. otherwise               -> clicks through the export request; the
 //           scheduler polls again later and picks the archive up in (a);
 //        c. if the platform throws a wall (2FA, password confirm, redesign)
@@ -28,7 +28,7 @@ const PLATFORMS = require("./platforms");
 const events = new EventEmitter();
 events.setMaxListeners(50);
 
-let deps = null; // { sytHome, enqueue, getAccount, patchAccount, broadcast }
+let deps = null; // { coldHome, enqueue, getAccount, patchAccount, broadcast }
 const busy = new Set();
 const attentionWins = new Map(); // id -> BrowserWindow left open for the user
 const capturedParts = new Set();
@@ -53,10 +53,10 @@ function init(d) {
 
 const ready = () => !!deps;
 
-// NOTE: partitions resolve to <userData>/Partitions/syt-<id>, and userData is
+// NOTE: partitions resolve to <userData>/Partitions/cold-<id>, and userData is
 // derived from the product name. Renaming the app would sign every user out of
 // every platform, so that rename would need a migration step here.
-const partitionFor = (id) => "persist:syt-" + id;
+const partitionFor = (id) => "persist:cold-" + id;
 const sesFor = (id) => session.fromPartition(partitionFor(id));
 
 // Google (and others) refuse to sign you in from a browser whose user agent
@@ -93,7 +93,7 @@ const hasAttention = (id) => {
 
 // ---------------------------------------------------------------------------
 // Download capture: any download started in a platform's session is saved to
-// <SYT_HOME>/incoming/ and ingested. This covers both the automated click and
+// <COLD_HOME>/incoming/ and ingested. This covers both the automated click and
 // anything the user clicks in a surfaced "needs attention" window.
 // ---------------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ function ensureDownloadCapture(id) {
   // window that started it is gone.
   sesFor(id).on("will-download", (_e, item) => {
     if (!ready()) return;
-    const dir = path.join(deps.sytHome(), "incoming");
+    const dir = path.join(deps.coldHome(), "incoming");
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch {
@@ -392,7 +392,7 @@ function interactiveSignIn(p) {
     const win = new BrowserWindow({
       width: 980,
       height: 760,
-      title: `Sign in to ${p.name} — Save Your Shit`,
+      title: `Sign in to ${p.name} — Cold Storage`,
       webPreferences: {
         partition: partitionFor(id),
         contextIsolation: true,
@@ -702,7 +702,7 @@ async function runSync(id, { interactive = false, surfaceOnAttention = true } = 
       width: 1100,
       height: 800,
       show: false, // never steal focus; only shown if the user is needed
-      title: `${p.name} — Save Your Shit`,
+      title: `${p.name} — Cold Storage`,
       webPreferences: {
         partition: partitionFor(id),
         contextIsolation: true,
@@ -909,7 +909,7 @@ async function runSync(id, { interactive = false, surfaceOnAttention = true } = 
     });
     // Notify once per transition, not on every retry of the same state.
     if (needsUser && prevResult !== outcome.result) {
-      notify(`${p.name} needs a quick click`, "Open Save Your Shit to finish — it takes a second.");
+      notify(`${p.name} needs a quick click`, "Open Cold Storage to finish — it takes a second.");
     }
   }
   deps.broadcast();

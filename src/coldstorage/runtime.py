@@ -4,7 +4,7 @@ Passphrase resolution order (first hit wins), so scheduled/headless runs never
 block on a prompt:
 
 1. the OS keychain cache (set at ``init`` time),
-2. the ``SYT_PASSPHRASE`` environment variable,
+2. the ``COLD_PASSPHRASE`` environment variable,
 3. an interactive prompt (only when attached to a TTY).
 """
 
@@ -42,7 +42,7 @@ def resolve_cipher(
         return None
     km = KeyManager(layout.keys_dir)
     if not km.exists():
-        raise LockedError("no keyfile found — run `syt init` first")
+        raise LockedError("no keyfile found — run `cold init` first")
 
     if passphrase:
         return km.unlock(passphrase)
@@ -51,7 +51,7 @@ def resolve_cipher(
     if cached is not None:
         return cached
 
-    env_pass = os.environ.get("SYT_PASSPHRASE")
+    env_pass = os.environ.get("COLD_PASSPHRASE")
     if env_pass:
         return km.unlock(env_pass)
 
@@ -66,7 +66,7 @@ def resolve_cipher(
         raise LockedError("could not unlock archive")
 
     raise LockedError(
-        "archive is encrypted and locked. Set SYT_PASSPHRASE or run interactively."
+        "archive is encrypted and locked. Set COLD_PASSPHRASE or run interactively."
     )
 
 
