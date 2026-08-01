@@ -1173,7 +1173,10 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
+      // COLD_DEMO swaps in a stateful, entirely fake account bridge for
+      // recording a product demo — connecting is simulated, no real sign-in.
+      // The archive data it shows is still real (seeded by tools/seed_demo.py).
+      preload: path.join(__dirname, process.env.COLD_DEMO ? "demo-preload.js" : "preload.js"),
     },
   });
 
