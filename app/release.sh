@@ -58,6 +58,21 @@ APP="release/mac-arm64/Cold Storage.app"
 # only the DMG and that ticket is left behind with the disk image: the app's
 # first launch then needs a round-trip to Apple, and on a machine that is
 # offline (or behind a captive portal) it is refused.
+# Freeze the Python engine from the *current* source every time. Reusing
+# whatever happened to be in dist/ is how a 0.4.2 app shipped with a 0.4.1
+# engine inside it — the two versions only have to agree by accident otherwise.
+echo "→ freezing the engine…"
+( cd ../packaging && uv run pyinstaller cold.spec --noconfirm \
+    --distpath ../dist --workpath ../build/pyi >/dev/null )
+ENGINE_VER=$(../dist/cold/cold version | sed 's/.* //')
+APP_VER=$(node -p "require('./package.json').version")
+if [ "$ENGINE_VER" != "$APP_VER" ]; then
+  echo "error: engine is $ENGINE_VER but the app is $APP_VER." >&2
+  echo "  Bump the version in pyproject.toml and src/coldstorage/__init__.py too." >&2
+  exit 1
+fi
+echo "→ engine: $ENGINE_VER"
+
 echo "→ building the app…"
 npm run dist -- --dir
 
