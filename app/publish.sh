@@ -42,7 +42,9 @@ cp "$DMG" "$STAGE/$STABLE_NAME"
 ARGS=(--title "$TITLE" --target master)
 [ -n "$NOTES" ] && ARGS+=(--notes-file "$NOTES") || ARGS+=(--generate-notes)
 
-echo "→ publishing $TAG…"
+# Braces are required here: the ellipsis is multi-byte, and an unbraced
+# "$TAG…" makes bash read those bytes as part of the variable name.
+echo "→ publishing ${TAG}…"
 gh release create "$TAG" "${ARGS[@]}" \
   "$STAGE/$(basename "$DMG" | tr ' ' '-')" \
   "$STAGE/$STABLE_NAME" \
