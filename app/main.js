@@ -50,8 +50,32 @@ function coldBinary() {
   return path.join(__dirname, "..", "dist", "cold", "cold");
 }
 
+/**
+ * Where the archive lives.
+ *
+ * This MUST resolve to the same directory as `get_home()` in the Python engine
+ * (src/coldstorage/paths.py). When it didn't, the shell looked in ~/ColdStorage,
+ * decided there was no archive and ran `cold init` — while the engine resolved
+ * the user's real pre-rename archive and refused with "already initialized",
+ * which the app then reported as "Setup failed". A working install looked broken.
+ *
+ * Kept in step by tests/test_home_resolution_matches.py.
+ */
 function coldHome() {
-  return process.env.COLD_HOME || path.join(os.homedir(), "ColdStorage");
+  const override = process.env.COLD_HOME || process.env.SYT_HOME;
+  if (override) return override;
+  const current = path.join(os.homedir(), "ColdStorage");
+  // Before the rename this was ~/SaveYourShit. Keep using an existing one
+  // rather than starting a second, empty archive next to it.
+  const legacy = path.join(os.homedir(), "SaveYourShit");
+  try {
+    if (!fs.existsSync(current) && fs.existsSync(path.join(legacy, "config.toml"))) {
+      return legacy;
+    }
+  } catch {
+    /* fall through to the default */
+  }
+  return current;
 }
 
 /** Where the Recovery Kit goes: visible to the user, outside what gets synced. */
