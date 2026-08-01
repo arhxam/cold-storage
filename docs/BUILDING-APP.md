@@ -52,7 +52,9 @@ The result is a DMG that opens with no warnings and no quarantine bypass.
      --key-id XXXX --issuer <issuer-uuid>
    ```
 
-   `release.sh` uses the `cold-notary` profile by default; override with
+   `release.sh` auto-detects a `cold-notary` or `syt-notary` profile (the
+   credential is a keychain item on your machine, so a project rename does not
+   rename it); override with
    `COLD_NOTARY_PROFILE`.
 
 ## How signing works

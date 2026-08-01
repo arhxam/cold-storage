@@ -16,7 +16,25 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-PROFILE="${COLD_NOTARY_PROFILE:-cold-notary}"
+# The notarytool credential is a keychain item on the build machine, not a
+# project name — renaming the project does not rename it. Pick whichever of the
+# known names actually exists so an existing setup keeps working.
+PROFILE="${COLD_NOTARY_PROFILE:-}"
+if [ -z "$PROFILE" ]; then
+  for candidate in cold-notary syt-notary; do
+    if xcrun notarytool history --keychain-profile "$candidate" >/dev/null 2>&1; then
+      PROFILE="$candidate"
+      break
+    fi
+  done
+fi
+if [ -z "$PROFILE" ]; then
+  echo "error: no notarytool keychain profile found (tried cold-notary, syt-notary)." >&2
+  echo "  Create one with: xcrun notarytool store-credentials cold-notary …" >&2
+  echo "  Or set COLD_NOTARY_PROFILE to the name of yours." >&2
+  exit 1
+fi
+echo "→ notary profile: $PROFILE"
 
 IDENTITY="${COLD_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
   | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -1)}"
