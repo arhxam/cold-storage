@@ -32,3 +32,6 @@ htmlcov/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+# Local logo exploration (scratch, not part of the product)
+logo-concepts/

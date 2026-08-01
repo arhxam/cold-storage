@@ -18,6 +18,7 @@ No Terminal, no right-click workaround, no security warning.</sub>
 <br><br>
 
 <a href="https://github.com/arhxam/save-your-shit/releases/latest"><img src="https://img.shields.io/github/v/release/arhxam/save-your-shit?label=latest&color=0a84ff" alt="Latest release"></a>
+<a href="https://github.com/arhxam/save-your-shit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arhxam/save-your-shit/ci.yml?branch=master&label=tests" alt="Tests"></a>
 <img src="https://img.shields.io/badge/macOS-13%2B%20(Apple%20Silicon)-999" alt="macOS 13+ Apple Silicon">
 <img src="https://img.shields.io/badge/license-MIT-999" alt="MIT licensed">
 <img src="https://img.shields.io/badge/servers-none-2ea043" alt="No servers">

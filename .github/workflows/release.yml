@@ -15,11 +15,19 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Build sdist + wheel
         run: uv build
-      - name: Attach artifacts to the GitHub Release (the "download button")
+      - name: Attach artifacts to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
-          generate_release_notes: true
+          # Name the artifacts explicitly. A `dist/*` glob also picks up the
+          # one-byte .gitignore that the build writes there, which GitHub
+          # renames to "default.gitignore" and lists as a downloadable asset
+          # on every release.
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          # Don't clobber notes written by app/publish.sh, which publishes the
+          # macOS build. Only fill them in if the release has none.
+          generate_release_notes: false
       # To also publish to PyPI (so `uvx saveyourshit` works), add a PyPI token
       # as the `PYPI_TOKEN` secret and uncomment:
       # - run: uv publish --token ${{ secrets.PYPI_TOKEN }}
