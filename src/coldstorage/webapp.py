@@ -630,7 +630,7 @@ INDEX_HTML = r"""<!doctype html>
 </head>
 <body>
 <div class="titlebar" id="titlebar">
-  <div class="tb-brand" aria-label="Cold Storage"><span class="mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="bt">Cold Storage</span></div>
+  <div class="tb-brand" aria-label="Cold Storage"><span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><polygon points="1.27,4.93 15.44,13.12 15.44,23.28 1.27,15.10" fill="currentColor" opacity=".55"/><polygon points="15.44,13.12 22.73,8.90 22.73,19.07 15.44,23.28" fill="currentColor" opacity=".8"/><polygon points="8.56,0.72 22.73,8.90 15.44,13.12 1.27,4.93" fill="currentColor"/></svg></span><span class="bt">Cold Storage</span></div>
   <div class="sp"></div>
   <button class="tbtn primary" id="tb-add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Connect account</button>
   <button class="tbtn icon" id="tb-menu" aria-label="More"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
@@ -653,6 +653,7 @@ const PATHS={
   grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
   shield:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
+  container:'<path d="M3.2 7.1 12 12.2v8.6L3.2 15.7z"/><path d="M12 12.2l8.8-5.1v8.6L12 20.8z"/><path d="M12 3.2l8.8 5.1L12 12.2 3.2 7.1z"/>',
   box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
   chat:'<path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/>',
   users:'<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.9"/><path d="M15 3.1a4 4 0 0 1 0 7.8"/>',
@@ -680,7 +681,9 @@ const PATHS={
 };
 /* ---------- tiny helpers ---------- */
 function ic(n,s,w){s=s||16;w=w||2;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[n]||''}</svg>`;}
-function brandMark(s){s=s||15;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>`;}
+/* The product mark: an isometric shipping container, drawn from three flat
+   faces so it tints with currentColor and stays legible at 14px. */
+function brandMark(s){s=s||15;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><polygon points="1.27,4.93 15.44,13.12 15.44,23.28 1.27,15.10" fill="currentColor" opacity=".55"/><polygon points="15.44,13.12 22.73,8.90 22.73,19.07 15.44,23.28" fill="currentColor" opacity=".8"/><polygon points="8.56,0.72 22.73,8.90 15.44,13.12 1.27,4.93" fill="currentColor"/>`;}
 function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
 function escA(s){return esc(s).replace(/"/g,'&quot;');}
 function brandColor(id){return BRAND[id]||"#71717a";}

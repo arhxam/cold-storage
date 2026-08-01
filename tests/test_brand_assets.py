@@ -16,14 +16,38 @@ def _png_size(path: Path) -> tuple[int, int]:
     return struct.unpack(">II", data[16:24])
 
 
-def test_logo_svg_is_vector_safe_and_blue():
+def test_logo_svg_is_self_contained_vector():
+    """The mark must render anywhere, with nothing to fetch and no live text."""
     logo = LOGO_DIR / "cold-storage-mark.svg"
     root = ElementTree.parse(logo).getroot()
     assert root.attrib["viewBox"] == "0 0 1024 1024"
     source = logo.read_text()
-    assert "#2563EB" in source
+    # No text element: the wordmark is set in the UI, not baked into the icon,
+    # so it never renders with a missing font.
     assert "<text" not in source
+    # Nothing external — an icon that needs the network is not an icon.
     assert "href=" not in source and "<image" not in source
+    # Three faces make the container read as a solid object at any size.
+    assert source.count("<polygon") >= 3
+
+
+def test_flat_glyph_tints_with_the_surrounding_text():
+    """The in-app and menu-bar marks are masks, not pictures."""
+    glyph = (LOGO_DIR / "cold-storage-glyph.svg").read_text()
+    assert "currentColor" in glyph
+    assert "linearGradient" not in glyph, "a gradient cannot tint or act as a template"
+
+
+def test_the_ui_and_tray_use_the_container_mark():
+    """A stale shield in the title bar or menu bar is the kind of thing that
+    survives a rebrand because nothing points at it."""
+    ui = (ROOT / "src" / "coldstorage" / "webapp.py").read_text()
+    tray = (ROOT / "app" / "main.js").read_text()
+    shield = 'd="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"'
+    assert shield not in tray, "the menu-bar icon is still the old shield"
+    # The brand mark helper and the title bar must both draw the container.
+    brand = ui[ui.index("function brandMark("):]
+    assert "polygon" in brand[:600], "brandMark() no longer draws the container"
 
 
 def test_logo_png_family_has_exact_square_dimensions():
