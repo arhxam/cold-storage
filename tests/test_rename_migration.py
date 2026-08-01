@@ -100,3 +100,28 @@ def test_app_migrates_the_old_electron_user_data():
     # It has to run before whenReady, or the session layer reads the new path
     # first. Match the actual call site, not the mention in the comment above it.
     assert src.index("migrateLegacyUserData();") < src.index("app.whenReady().then")
+
+
+def test_app_also_renames_the_session_partitions():
+    """Copying userData across is not enough on its own.
+
+    The partition names changed with the project (persist:syt-<id> ->
+    persist:cold-<id>), so a migrated directory still leaves every sign-in in a
+    folder the new code never opens — the user would silently have to reconnect
+    every account. Caught by running the real upgrade rather than assuming.
+    """
+    from pathlib import Path
+
+    src = Path("app/main.js").read_text()
+    assert "migrateLegacyPartitions" in src
+    assert '"syt-"' in src, "must recognise the old partition prefix"
+    assert '"cold-" + name.slice(4)' in src, "must map it onto the new one"
+    # It must keep running after the first launch: by then Partitions/ exists
+    # and the directory copy is skipped, but a stale syt-* may still be there.
+    body = src[src.index("function migrateLegacyUserData"):]
+    body = body[: body.index("\nfunction migrateLegacyPartitions")]
+    assert body.rstrip().count("migrateLegacyPartitions(current);") == 1
+    assert "if (fs.existsSync(path.join(current, \"Partitions\"))) return;" not in body, (
+        "an early return before the partition rename would skip it on every "
+        "launch after the first"
+    )

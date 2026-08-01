@@ -1203,24 +1203,60 @@ function createWindow() {
 function migrateLegacyUserData() {
   try {
     const current = app.getPath("userData");
-    if (fs.existsSync(path.join(current, "Partitions"))) return; // already ours
     const legacy = path.join(path.dirname(current), "Save Your Shit");
-    if (legacy === current || !fs.existsSync(legacy)) return;
-    fs.mkdirSync(current, { recursive: true });
-    for (const entry of fs.readdirSync(legacy)) {
-      const from = path.join(legacy, entry);
-      const to = path.join(current, entry);
-      if (fs.existsSync(to)) continue;
-      try {
-        fs.cpSync(from, to, { recursive: true, errorOnExist: false, force: false });
-      } catch {
-        /* one unreadable item must not abort the migration */
+    // Copy the old directory across, but only the first time — after that the
+    // new location is authoritative and re-copying would resurrect stale state.
+    if (legacy !== current && fs.existsSync(legacy) && !fs.existsSync(path.join(current, "Partitions"))) {
+      fs.mkdirSync(current, { recursive: true });
+      for (const entry of fs.readdirSync(legacy)) {
+        if (fs.existsSync(path.join(current, entry))) continue;
+        try {
+          fs.cpSync(path.join(legacy, entry), path.join(current, entry), {
+            recursive: true,
+            errorOnExist: false,
+            force: false,
+          });
+        } catch {
+          /* one unreadable item must not abort the migration */
+        }
       }
+      // Deliberately not deleting the old directory: if anything about this
+      // went wrong, the user's sign-ins are still recoverable from it.
     }
-    // Deliberately not deleting the old directory: if anything about this went
-    // wrong, the user's sign-ins are still recoverable from it.
+    // Always: the partition names changed too (persist:syt-<id> ->
+    // persist:cold-<id>), so a copied directory alone leaves every sign-in in a
+    // folder the new code never opens. This must also run on later launches,
+    // because by then Partitions/ exists and the copy above is skipped.
+    migrateLegacyPartitions(current);
   } catch {
     /* a failed migration means "sign in again", never a failed launch */
+  }
+}
+
+/** Rename Partitions/syt-<id> to Partitions/cold-<id>, without clobbering. */
+function migrateLegacyPartitions(userData) {
+  const dir = path.join(userData, "Partitions");
+  let entries;
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return; // no partitions yet — nothing to carry over
+  }
+  for (const name of entries) {
+    if (!name.startsWith("syt-")) continue;
+    const from = path.join(dir, name);
+    const to = path.join(dir, "cold-" + name.slice(4));
+    try {
+      // A partition Chromium created but never signed into has no cookie
+      // store; that is not something worth protecting from being replaced.
+      const targetHasSession =
+        fs.existsSync(to) && fs.readdirSync(to).some((f) => f.startsWith("Cookies"));
+      if (targetHasSession) continue;
+      if (fs.existsSync(to)) fs.rmSync(to, { recursive: true, force: true });
+      fs.renameSync(from, to);
+    } catch {
+      /* skip this one; the user re-connects that platform at worst */
+    }
   }
 }
 migrateLegacyUserData();
