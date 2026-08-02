@@ -97,6 +97,18 @@ class Engine:
                     batches += 1
                 except Exception as exc:  # this batch only
                     errors.append(f"{type(exc).__name__}: {exc}")
+
+            # A recognized export that parsed no records at all is not a success.
+            # The overwhelming cause is Meta's HTML export when we can only read
+            # JSON; a truncated/corrupt download is the other. Recording this as
+            # "ok" is exactly how someone comes to trust a backup that is empty —
+            # the failure this whole tool exists to prevent. (A re-ingest of data
+            # already stored still *parses* records, so batches > 0; only a
+            # genuinely empty parse is flagged here.)
+            if batches == 0:
+                from .preflight import empty_export_reason
+
+                errors.insert(0, empty_export_reason(unpacked, connector.id))
             if errors:
                 status = "error"
             if snapshot_error:

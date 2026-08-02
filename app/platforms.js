@@ -54,14 +54,26 @@ async function metaRequest(ctx) {
   await ctx.click(["next", "continue"], { timeout: 5000 });
   await ctx.click(["download to device"], { timeout: 9000 });
   await ctx.click(["next", "continue"], { timeout: 5000 });
-  // The engine parses JSON — flip the format if the option is exposed here.
-  if (await ctx.click(["format"], { timeout: 5000 })) {
-    await ctx.click(["json"], { timeout: 5000 });
-    await ctx.click(["save", "done"], { timeout: 5000 });
+  // Meta DEFAULTS to HTML, which the engine cannot read. JSON is therefore not
+  // optional: never fall through to "Create files" without positively selecting
+  // JSON. Doing so is exactly what produced an HTML export the app then reported
+  // as a successful-but-empty backup. If we can't confirm JSON, hand it to the
+  // user rather than creating a useless HTML archive.
+  let jsonPicked = false;
+  if (await ctx.click(["format", "format:"], { timeout: 6000 })) {
+    jsonPicked = await ctx.click(["json"], { timeout: 6000 });
+    await ctx.click(["save", "done", "apply"], { timeout: 4000 });
   }
-  const created = await ctx.click(["create files", "create file"], { timeout: 12000 });
+  if (!jsonPicked) {
+    throw needsUser(
+      "One step needs you: set Format to JSON (not HTML) in the window, then press Create files."
+    );
+  }
+  const created = await ctx.click(["create files", "create file", "submit request"], {
+    timeout: 12000,
+  });
   if (!created) {
-    throw needsUser("Almost there — pick JSON format and press Create files in the window.");
+    throw needsUser("Almost there — press Create files in the window.");
   }
   return true;
 }
