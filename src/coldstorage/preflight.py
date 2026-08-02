@@ -56,14 +56,12 @@ def check_export(source: Path, *, connector_id: str | None = None) -> CheckResul
             warnings.append(f"parser raised {type(exc).__name__}: {exc}")
 
         warnings += _coverage_warnings(connector, counts)
-        # Detected the platform but parsed nothing + HTML files present → almost
-        # certainly an HTML export instead of JSON.
-        if sum(counts.values()) == 0 and (
-            list(unpacked.glob("**/message_*.html")) or list(unpacked.glob("**/*.html"))
-        ):
+        # Detected the platform but parsed nothing. HTML and JSON both parse now,
+        # so this means a partial export that omitted the data we back up.
+        if sum(counts.values()) == 0:
             warnings.append(
-                "Detected the platform but found no data, and there are .html files — "
-                "you likely exported HTML; re-download choosing JSON."
+                "Detected the platform but found no messages, posts, or connections — "
+                'this looks like a partial export; request "All available information".'
             )
         return CheckResult(
             connector=connector.id,
@@ -74,33 +72,18 @@ def check_export(source: Path, *, connector_id: str | None = None) -> CheckResul
         )
 
 
-def looks_like_html_export(path: Path) -> bool:
-    """True if an unpacked export directory is Meta's HTML format, not JSON.
-
-    Meta's "Download your information" defaults to HTML; we can only read JSON.
-    An HTML export still has the same folder structure (so a connector's
-    ``detect()`` matches), but every data file is ``.html``, so the parser finds
-    nothing. Presence of any ``.html`` data file — ``start_here.html`` sits at
-    the root of every HTML export — is the tell.
-    """
-    path = Path(path)
-    return bool(list(path.glob("**/*.html")))
-
-
 def empty_export_reason(path: Path, connector_id: str) -> str:
     """A user-actionable reason a recognized export parsed to nothing.
 
     Used by the engine so an ingest that stored zero records is reported as a
-    real failure — never a silent success.
+    real failure — never a silent success. HTML and JSON both parse now, so an
+    empty result means the export simply didn't include the data we back up —
+    almost always a partial "some of your information" export.
     """
-    if looks_like_html_export(path):
-        return (
-            f"This {connector_id} export is in HTML format, which Cold Storage cannot read — "
-            "re-download choosing JSON format (Meta defaults to HTML)."
-        )
     return (
-        f"The {connector_id} export was recognized but contained no readable data — "
-        "the download may be incomplete or empty; request a fresh export and try again."
+        f"This {connector_id} export didn't contain any messages, posts, or connections "
+        'to back up. When you request your data, choose "All available information" '
+        "(not a subset), then add it again."
     )
 
 
@@ -126,8 +109,8 @@ def unrecognized_reasons(path: Path) -> list[str]:
             return reasons
     if html:
         reasons.append(
-            "It looks like an HTML export — re-download choosing JSON format, "
-            "which is what this tool reads."
+            "If this is an Instagram or Facebook export it may be partial — the app reads "
+            'full exports (HTML or JSON), so request "All available information" and add it again.'
         )
     else:
         reasons.append(

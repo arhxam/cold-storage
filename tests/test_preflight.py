@@ -24,9 +24,9 @@ def test_check_warns_on_html_export(tmp_path):
     (html / "your_instagram_activity/messages/inbox/x").mkdir(parents=True)
     (html / "your_instagram_activity/messages/inbox/x/message_1.html").write_text("<html></html>")
     r = check_export(html)
-    # detects the platform but finds no JSON data → loud HTML hint (0 records)
+    # detects the platform but the (empty) file has no records → partial-export hint
     assert r.total == 0
-    assert any("html" in w.lower() for w in r.warnings)
+    assert any("available information" in w.lower() or "partial" in w.lower() for w in r.warnings)
 
 
 def test_check_from_zip(instagram_export, tmp_path):

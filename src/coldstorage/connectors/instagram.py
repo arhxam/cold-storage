@@ -13,6 +13,7 @@ from pathlib import Path
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
 from .base import Connector, load_json, register, stable_uid
 from .meta_common import parse_followers_list, parse_message_threads
+from .meta_html import parse_html_followers, parse_html_message_threads, parse_html_posts
 
 
 class InstagramConnector(Connector):
@@ -30,16 +31,23 @@ class InstagramConnector(Connector):
 
     def parse_export(self, path: Path) -> Iterator[Batch]:
         root = Path(path)
-        yield from parse_message_threads(root, self.id)
 
+        # JSON rail (the format we prefer). Yields nothing for an HTML export.
+        yield from parse_message_threads(root, self.id)
         for followers_file in root.glob("**/followers_and_following/followers*.json"):
             yield parse_followers_list(followers_file, self.id, RecordType.FOLLOWER)
         for following_file in root.glob("**/followers_and_following/following.json"):
             yield parse_followers_list(
                 following_file, self.id, RecordType.FOLLOWING, key="relationships_following"
             )
-
         yield from self._parse_posts(root)
+
+        # HTML rail — Meta's default export format. Reads the same data out of
+        # the .html files, so the user never has to re-request JSON. Yields
+        # nothing for a JSON export (the globs match no files).
+        yield from parse_html_message_threads(root, self.id)
+        yield from parse_html_followers(root, self.id)
+        yield from parse_html_posts(root, self.id)
 
     def _parse_posts(self, root: Path) -> Iterator[Batch]:
         for posts_file in list(root.glob("**/content/posts_*.json")) + list(
