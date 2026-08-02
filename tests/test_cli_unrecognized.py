@@ -21,10 +21,11 @@ def _html_export(tmp_path):
     return z
 
 
-def test_unrecognized_reasons_names_the_html_mistake(tmp_path):
+def test_unrecognized_reasons_points_at_a_full_export(tmp_path):
+    # HTML parses now, so a lone/partial Meta export is steered to the real fix:
+    # request "All available information" rather than a subset.
     reasons = unrecognized_reasons(_html_export(tmp_path))
-    assert any("HTML export" in r for r in reasons)
-    assert any("JSON" in r for r in reasons)
+    assert any("available information" in r.lower() for r in reasons)
 
 
 def test_unrecognized_reasons_handles_a_corrupt_zip(tmp_path):
@@ -49,6 +50,6 @@ def test_ingest_explains_instead_of_crashing(tmp_path, monkeypatch):
 
     assert result.exit_code == 2, "a clean exit code, not a crash"
     assert "Traceback" not in result.output
-    assert "HTML export" in result.output
+    assert "available information" in result.output.lower()
     # The app keys off this marker to stop retrying a file that can never work.
     assert UNRECOGNIZED_MARKER in result.output

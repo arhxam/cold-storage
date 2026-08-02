@@ -195,7 +195,7 @@ def ingest(
                 f"[bold]{result.connector}[/], but part of this export could not be read."
             )
         err.print(f"  {result.error}")
-        err.print("[dim]  Re-download the export (choose JSON, not HTML) and retry.[/]")
+        err.print('[dim]  Request your data and choose "All available information", then retry.[/]')
         if result.snapshot:
             err.print(f"[dim]  Raw export kept at: {result.snapshot}[/]")
         raise typer.Exit(3)

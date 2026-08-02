@@ -12,6 +12,7 @@ from pathlib import Path
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
 from .base import Connector, load_json, register, stable_uid
 from .meta_common import parse_message_threads
+from .meta_html import parse_html_followers, parse_html_message_threads, parse_html_posts
 
 
 class FacebookConnector(Connector):
@@ -34,9 +35,14 @@ class FacebookConnector(Connector):
 
     def parse_export(self, path: Path) -> Iterator[Batch]:
         root = Path(path)
+        # JSON rail (preferred).
         yield from parse_message_threads(root, self.id)
         yield from self._parse_friends(root)
         yield from self._parse_posts(root)
+        # HTML rail — Meta's default export format, read directly.
+        yield from parse_html_message_threads(root, self.id)
+        yield from parse_html_followers(root, self.id)
+        yield from parse_html_posts(root, self.id)
 
     def _parse_friends(self, root: Path) -> Iterator[Batch]:
         for friends_file in root.glob("**/your_friends.json"):

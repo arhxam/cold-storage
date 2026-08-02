@@ -198,13 +198,13 @@ function ensureDownloadCapture(id) {
                 }
               : {
                   // Never leave a hollow "Backed up" behind: the export read as
-                  // zero records. The usual cause is an HTML export where JSON
-                  // is needed, so point the user straight at the fix. (The exact
-                  // engine reason also arrives as a notification/toast.)
-                  lastResult: "reconnect",
+                  // zero records. HTML and JSON both parse now, so this means a
+                  // partial/incomplete export — point the user at the real fix.
+                  // (The exact engine reason also arrives as a notification.)
+                  lastResult: "error",
                   detail:
-                    "That export couldn't be read — Instagram may have sent HTML, not JSON. " +
-                    "Reconnect to request a fresh JSON export, or add a JSON export by hand.",
+                    "That export couldn't be backed up — it may be incomplete. " +
+                    'Re-request your data and choose "All available information".',
                   failures: (deps.getAccount(id).failures || 0) + 1,
                 }
           );

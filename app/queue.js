@@ -24,12 +24,12 @@ const PERMANENT = [
   "could not recognize this export",
   "not recognized by any connector",
   "could not be opened — it may be corrupt",
-  // A recognized export that read as zero records: an HTML export where JSON
-  // was needed, or an empty/partial download. Retrying the same file cannot
-  // help — the fix is a fresh JSON export, so surface it instead of looping.
-  "in html format",
-  "no readable data",
+  // A recognized export that read as zero records: a partial/empty download.
+  // Retrying the same file cannot help — the fix is a fuller export, so surface
+  // it instead of looping.
   "nothing could be read",
+  "didn't contain any messages",
+  "all available information",
 ];
 function isPermanent(text) {
   const t = String(text || "").toLowerCase();
