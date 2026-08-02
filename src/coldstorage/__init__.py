@@ -3,7 +3,7 @@
 No server. Nothing leaves your device except to storage you control.
 """
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 APP_NAME = "coldstorage"
 DISPLAY_NAME = "Cold Storage"

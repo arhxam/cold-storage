@@ -74,6 +74,36 @@ def check_export(source: Path, *, connector_id: str | None = None) -> CheckResul
         )
 
 
+def looks_like_html_export(path: Path) -> bool:
+    """True if an unpacked export directory is Meta's HTML format, not JSON.
+
+    Meta's "Download your information" defaults to HTML; we can only read JSON.
+    An HTML export still has the same folder structure (so a connector's
+    ``detect()`` matches), but every data file is ``.html``, so the parser finds
+    nothing. Presence of any ``.html`` data file — ``start_here.html`` sits at
+    the root of every HTML export — is the tell.
+    """
+    path = Path(path)
+    return bool(list(path.glob("**/*.html")))
+
+
+def empty_export_reason(path: Path, connector_id: str) -> str:
+    """A user-actionable reason a recognized export parsed to nothing.
+
+    Used by the engine so an ingest that stored zero records is reported as a
+    real failure — never a silent success.
+    """
+    if looks_like_html_export(path):
+        return (
+            f"This {connector_id} export is in HTML format, which Cold Storage cannot read — "
+            "re-download choosing JSON format (Meta defaults to HTML)."
+        )
+    return (
+        f"The {connector_id} export was recognized but contained no readable data — "
+        "the download may be incomplete or empty; request a fresh export and try again."
+    )
+
+
 def unrecognized_reasons(path: Path) -> list[str]:
     """Why an export wasn't recognized, in words a user can act on.
 

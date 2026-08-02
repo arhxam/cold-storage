@@ -197,8 +197,14 @@ function ensureDownloadCapture(id) {
                   archiveKeys: [...(Array.isArray(prev) ? prev : []), key].slice(-40),
                 }
               : {
-                  lastResult: "error",
-                  detail: "The downloaded export could not be backed up.",
+                  // Never leave a hollow "Backed up" behind: the export read as
+                  // zero records. The usual cause is an HTML export where JSON
+                  // is needed, so point the user straight at the fix. (The exact
+                  // engine reason also arrives as a notification/toast.)
+                  lastResult: "reconnect",
+                  detail:
+                    "That export couldn't be read — Instagram may have sent HTML, not JSON. " +
+                    "Reconnect to request a fresh JSON export, or add a JSON export by hand.",
                   failures: (deps.getAccount(id).failures || 0) + 1,
                 }
           );

@@ -37,8 +37,9 @@
     --bg: #0a0a0a;
     --text: #f4f4f4;
     --muted: #8c8c8c;
-    --faint: #666;
+    --faint: #6a6a6a;
     --line: rgba(255,255,255,.10);
+    --line-2: rgba(255,255,255,.18);
     --grid: rgba(255,255,255,.035);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -52,6 +53,7 @@
   a { color: inherit; }
   ::selection { background: rgba(255,255,255,.20); }
   code { font: 500 .88em ui-monospace, "SF Mono", Menlo, monospace; color: #cfcfcf; }
+  img { max-width: 100%; }
 
   /* Faint grid + vignette, monochrome */
   .grid-bg {
@@ -60,8 +62,8 @@
       linear-gradient(to right, var(--grid) 1px, transparent 1px) 0 0 / 68px 68px,
       linear-gradient(to bottom, var(--grid) 1px, transparent 1px) 0 0 / 68px 68px,
       var(--bg);
-    -webkit-mask-image: radial-gradient(120% 80% at 50% 24%, #000 38%, transparent 92%);
-            mask-image: radial-gradient(120% 80% at 50% 24%, #000 38%, transparent 92%);
+    -webkit-mask-image: radial-gradient(120% 70% at 50% 18%, #000 34%, transparent 90%);
+            mask-image: radial-gradient(120% 70% at 50% 18%, #000 34%, transparent 90%);
   }
   .grid-bg::after {
     content: ""; position: absolute; inset: 0;
@@ -90,9 +92,9 @@
   /* Hero */
   .hero {
     position: relative; z-index: 1; text-align: center;
-    min-height: calc(100vh - 90px);
+    min-height: 66vh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 60px 24px 80px;
+    padding: 52px 24px 36px;
   }
   h1 {
     font-size: clamp(40px, 7.4vw, 74px); line-height: 1.02; font-weight: 600;
@@ -114,6 +116,14 @@
   .btn-download:hover { background: #fff; transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 14px 40px rgba(0,0,0,.6); }
   .btn-download svg { width: 17px; height: 17px; margin-top: -2px; }
 
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+    font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: var(--text);
+    background: rgba(255,255,255,.04); border: 1px solid var(--line-2);
+    padding: 14px 24px; border-radius: 12px; transition: border-color .15s ease, transform .15s ease, background .15s ease;
+  }
+  .btn-outline:hover { border-color: rgba(255,255,255,.34); transform: translateY(-2px); }
+
   .ghost {
     display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
     font-size: 15px; color: var(--muted); transition: color .15s ease;
@@ -128,19 +138,51 @@
   .metaline a:hover { color: var(--text); }
 
   /* Product shot */
-  .showcase { position: relative; z-index: 1; padding: 10px 24px 90px; }
+  .showcase { position: relative; z-index: 1; padding: 8px 24px 20px; }
   .frame { max-width: 1000px; margin: 0 auto; position: relative; }
   .frame::before {
-    content: ""; position: absolute; inset: -8% 6% 34% 6%; z-index: -1;
+    content: ""; position: absolute; inset: -8% 6% 30% 6%; z-index: -1;
     background: radial-gradient(55% 55% at 50% 40%, rgba(255,255,255,.10), transparent 72%);
     filter: blur(26px);
   }
   .frame img {
-    width: 100%; display: block; border-radius: 14px;
+    width: 100%; height: auto; aspect-ratio: 2560 / 1576; display: block; border-radius: 14px;
     border: 1px solid var(--line);
     box-shadow: 0 40px 90px -30px rgba(0,0,0,.85);
   }
-  .caption { text-align: center; color: var(--faint); font-size: 13.5px; margin-top: 20px; }
+
+  /* Sections */
+  .block { position: relative; z-index: 1; padding: 92px 0; }
+  .eyebrow { display: block; text-align: center; font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .h2 {
+    text-align: center; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.06; font-weight: 600;
+    letter-spacing: -0.03em; margin: 14px auto 0; max-width: 20ch;
+    background: linear-gradient(180deg, #ffffff 45%, #bcbcbc);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lead { text-align: center; color: var(--muted); font-size: 18px; line-height: 1.6; margin: 16px auto 0; max-width: 54ch; }
+
+  /* Two-column feature */
+  .feature { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; margin-top: 8px; }
+  .feat-shot img { width: 100%; height: auto; aspect-ratio: 2560 / 1576; display: block; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 70px -30px rgba(0,0,0,.85); }
+  .feat-text .eyebrow { text-align: left; }
+  .feat-h { font-size: clamp(26px, 3.3vw, 36px); line-height: 1.1; font-weight: 600; letter-spacing: -0.025em; color: #f4f4f4; margin: 12px 0 28px; }
+  .checks { display: flex; flex-direction: column; gap: 22px; }
+  .check { display: flex; gap: 14px; align-items: flex-start; }
+  .check .c { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--line-2); background: rgba(255,255,255,.05); color: #ededed; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-top: 2px; }
+  .check h4 { font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; }
+  .check p { color: var(--muted); font-size: 15px; line-height: 1.55; margin-top: 4px; max-width: 44ch; }
+
+  /* Platforms */
+  .plat-group { margin-top: 40px; }
+  .plat-group .tag { text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-bottom: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 660px; margin: 0 auto; }
+  .chip { font-size: 15px; color: var(--text); background: rgba(255,255,255,.035); border: 1px solid var(--line); padding: 9px 16px; border-radius: 999px; }
+
+  /* Final CTA */
+  .final { position: relative; z-index: 1; text-align: center; padding: 104px 24px 100px; border-top: 1px solid var(--line); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; margin-top: 34px; }
+  .final .metaline { margin: 22px auto 0; }
 
   /* Footer */
   footer { position: relative; z-index: 1; border-top: 1px solid var(--line); }
@@ -154,10 +196,18 @@
   .foot-links { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
   .foot-links .dot { opacity: .4; }
 
+  @media (max-width: 820px) {
+    .feature { grid-template-columns: 1fr; gap: 32px; }
+    .feat-text { order: 2; }
+    .feat-shot { order: 1; }
+    .feat-text .eyebrow, .feat-h { text-align: center; }
+    .check p { max-width: none; }
+  }
   @media (max-width: 640px) {
-    .hero { min-height: 0; padding: 40px 22px 60px; }
+    .hero { min-height: 0; padding: 36px 22px 32px; }
     .metaline { font-size: 12.5px; }
-    .showcase { padding-bottom: 64px; }
+    .block { padding: 68px 0; }
+    .final { padding: 76px 22px 80px; }
   }
 </style>
 </head>
@@ -191,9 +241,64 @@
 
 <section class="showcase">
   <div class="frame">
-    <img src="/shots/accounts.png" width="2560" height="1576" loading="lazy" alt="Cold Storage — accounts connected, each backing up on its own schedule" />
+    <img src="/shots/accounts.png" width="2560" height="1576" alt="Cold Storage — accounts connected, each backing up on its own schedule" />
   </div>
-  <p class="caption">Connect once. Instagram, Facebook, X, Google, Snapchat, LinkedIn and Reddit back up on their own; Discord, Telegram, WhatsApp and Slack you drop in by hand.</p>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="feature">
+      <div class="feat-shot">
+        <img src="/shots/dashboard.png" width="2560" height="1576" loading="lazy" alt="Cold Storage overview — what's backed up, how fresh it is, and where it lives" />
+      </div>
+      <div class="feat-text">
+        <span class="eyebrow">Built to be left alone</span>
+        <h3 class="feat-h">Set it once. It runs on its own.</h3>
+        <div class="checks">
+          <div class="check"><span class="c">✓</span><div><h4>No servers</h4><p>Everything happens on your Mac, from your own session. Nothing is ever uploaded.</p></div></div>
+          <div class="check"><span class="c">✓</span><div><h4>Your keys</h4><p>Media is encrypted at rest with AES-256, under a key wrapped by your passphrase — never the passphrase itself.</p></div></div>
+          <div class="check"><span class="c">✓</span><div><h4>Never drops an export</h4><p>Every download is queued to disk before the backup starts, so a crash or power cut just finishes on the next launch.</p></div></div>
+          <div class="check"><span class="c">✓</span><div><h4>Catches up after a reboot</h4><p>Starts at login, and schedules are wall-clock based — a laptop asleep for a week is due the moment it wakes.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" style="padding-top:0;">
+  <div class="wrap">
+    <span class="eyebrow">Platforms</span>
+    <h2 class="h2">Eleven platforms, one archive.</h2>
+    <p class="lead">Seven run completely hands-off. The rest you drop in yourself — anything matching an export that lands in your Downloads is picked up automatically.</p>
+
+    <div class="plat-group">
+      <div class="tag">Automatic — connect once</div>
+      <div class="chips">
+        <span class="chip">Instagram</span><span class="chip">Facebook</span><span class="chip">X / Twitter</span>
+        <span class="chip">Google</span><span class="chip">Snapchat</span><span class="chip">LinkedIn</span><span class="chip">Reddit</span>
+      </div>
+    </div>
+    <div class="plat-group">
+      <div class="tag">By hand — you add the file</div>
+      <div class="chips">
+        <span class="chip">Discord</span><span class="chip">Telegram</span><span class="chip">WhatsApp</span><span class="chip">Slack</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <span class="eyebrow">Get it</span>
+  <h2 class="h2">Your accounts can vanish.<br>Your archive won't.</h2>
+  <p class="lead">Free and open source. Open the DMG, drag to Applications, done.</p>
+  <div class="btn-row">
+    <a class="btn-download" href="https://github.com/arhxam/cold-storage/releases/latest/download/ColdStorage-macOS-arm64.dmg">
+      <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+      Download for macOS
+    </a>
+    <a class="btn-outline" href="https://github.com/arhxam/cold-storage/releases/latest">All downloads &amp; CLI</a>
+  </div>
+  <p class="metaline">Signed &amp; notarized by Apple · macOS 13+ · Apple Silicon · ~110&nbsp;MB</p>
 </section>
 
 <footer>
