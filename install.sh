@@ -3,11 +3,11 @@
 # Installs `uv` if needed, then installs the `cold` command. Local-only; nothing
 # about your data ever touches a network here.
 #
-#   curl -LsSf https://raw.githubusercontent.com/arhxam/cold-storage/master/install.sh | sh
+#   curl -LsSf https://raw.githubusercontent.com/arhxam/cold-storage-social-media-backup/master/install.sh | sh
 #
 set -eu
 
-REPO="${COLD_REPO:-https://github.com/arhxam/cold-storage}"
+REPO="${COLD_REPO:-https://github.com/arhxam/cold-storage-social-media-backup}"
 
 echo "→ Cold Storage installer"
 

@@ -121,7 +121,7 @@ The hook that works is the specific fear, not the feature list:
 > export, downloads it, and keeps an encrypted, searchable copy on your Mac. On a
 > schedule. Nothing ever leaves your machine.
 >
-> Free, open source, signed for macOS: github.com/arhxam/cold-storage
+> Free, open source, signed for macOS: github.com/arhxam/cold-storage-social-media-backup
 
 Be honest about the limits in a reply — it earns more trust than it costs:
 

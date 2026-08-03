@@ -13,15 +13,15 @@ and it requests your **official data export**, downloads it, and files it away. 
 no risk to your account), no servers, no cloud. Instagram, Facebook, X, Google, Snapchat,
 LinkedIn and Reddit run automatically; Discord, Telegram, WhatsApp and Slack you add by hand.
 
-<a href="https://github.com/arhxam/cold-storage/releases/latest/download/ColdStorage-macOS-arm64.dmg"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Mac-Apple%20Silicon%20·%20free-0a84ff?style=for-the-badge&logoColor=white" alt="Download Cold Storage for Mac" height="46"></a>
+<a href="https://github.com/arhxam/cold-storage-social-media-backup/releases/latest/download/ColdStorage-macOS-arm64.dmg"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Mac-Apple%20Silicon%20·%20free-0a84ff?style=for-the-badge&logoColor=white" alt="Download Cold Storage for Mac" height="46"></a>
 
 <sub>**Signed and notarized by Apple.** Open the DMG, drag to Applications, done.<br>
 No Terminal, no right-click workaround, no security warning.</sub>
 
 <br><br>
 
-<a href="https://github.com/arhxam/cold-storage/releases/latest"><img src="https://img.shields.io/github/v/release/arhxam/cold-storage?label=latest&color=0a84ff" alt="Latest release"></a>
-<a href="https://github.com/arhxam/cold-storage/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arhxam/cold-storage/ci.yml?branch=master&label=tests" alt="Tests"></a>
+<a href="https://github.com/arhxam/cold-storage-social-media-backup/releases/latest"><img src="https://img.shields.io/github/v/release/arhxam/cold-storage-social-media-backup?label=latest&color=0a84ff" alt="Latest release"></a>
+<a href="https://github.com/arhxam/cold-storage-social-media-backup/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arhxam/cold-storage-social-media-backup/ci.yml?branch=master&label=tests" alt="Tests"></a>
 <img src="https://img.shields.io/badge/macOS-13%2B%20(Apple%20Silicon)-999" alt="macOS 13+ Apple Silicon">
 <img src="https://img.shields.io/badge/license-MIT-999" alt="MIT licensed">
 <img src="https://img.shields.io/badge/servers-none-2ea043" alt="No servers">
@@ -34,7 +34,7 @@ No Terminal, no right-click workaround, no security warning.</sub>
 
 ## Install
 
-**Mac app — [⬇ Download the DMG](https://github.com/arhxam/cold-storage/releases/latest/download/ColdStorage-macOS-arm64.dmg)** (Apple Silicon, ~110 MB)
+**Mac app — [⬇ Download the DMG](https://github.com/arhxam/cold-storage-social-media-backup/releases/latest/download/ColdStorage-macOS-arm64.dmg)** (Apple Silicon, ~110 MB)
 
 Open it, drag **Cold Storage** to Applications, and open it from there. It's
 signed and notarized, so it just opens — no right-click, no warning. On first
@@ -43,10 +43,10 @@ launch it sets up your encrypted archive and puts a Recovery Kit on your Desktop
 **Command line** — same engine, any platform with Python:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/arhxam/cold-storage/master/install.sh | sh
+curl -LsSf https://raw.githubusercontent.com/arhxam/cold-storage-social-media-backup/master/install.sh | sh
 ```
 
-<sub>Prefer to inspect first? [Read the installer](install.sh) · [all downloads](https://github.com/arhxam/cold-storage/releases/latest) · Windows and Linux app builds aren't ready yet.</sub>
+<sub>Prefer to inspect first? [Read the installer](install.sh) · [all downloads](https://github.com/arhxam/cold-storage-social-media-backup/releases/latest) · Windows and Linux app builds aren't ready yet.</sub>
 
 ## Why
 
@@ -174,7 +174,7 @@ Run `cold --help` for everything.
 See it before touching a real account:
 
 ```bash
-git clone https://github.com/arhxam/cold-storage && cd cold-storage
+git clone https://github.com/arhxam/cold-storage-social-media-backup cold-storage && cd cold-storage
 uv sync --extra keyring
 export COLD_HOME=/tmp/cold-demo          # throwaway, leaves your real archive alone
 

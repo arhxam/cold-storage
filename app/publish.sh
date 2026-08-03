@@ -52,7 +52,7 @@ gh release create "$TAG" "${ARGS[@]}" \
 rm -rf "$STAGE"
 
 echo "→ checking the download button actually works…"
-URL="https://github.com/arhxam/cold-storage/releases/latest/download/$STABLE_NAME"
+URL="https://github.com/arhxam/cold-storage-social-media-backup/releases/latest/download/$STABLE_NAME"
 CODE=$(curl -sIL -o /dev/null -w "%{http_code}" --max-time 60 "$URL")
 [ "$CODE" = "200" ] || { echo "error: download link returned $CODE — $URL" >&2; exit 1; }
 
