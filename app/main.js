@@ -197,6 +197,7 @@ function accountsPayload() {
 function broadcastAccounts() {
   sendRenderer("cold:accounts", accountsPayload());
   updateTrayMenu();
+  refreshAttentionSurface();
 }
 
 // ---------------------------------------------------------------------------
@@ -578,9 +579,20 @@ function onQueueEvent(ev) {
   broadcastAccounts();
 }
 
-function notify(title, body) {
+function notify(title, body, onClick) {
   try {
-    if (Notification.isSupported()) new Notification({ title, body: String(body || "") }).show();
+    if (!Notification.isSupported()) return;
+    const n = new Notification({ title, body: String(body || "") });
+    if (typeof onClick === "function") {
+      n.on("click", () => {
+        try {
+          onClick();
+        } catch {
+          /* ignore */
+        }
+      });
+    }
+    n.show();
   } catch {
     /* notifications are optional */
   }
@@ -908,6 +920,103 @@ function updateTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate(items));
 }
 
+// ---------------------------------------------------------------------------
+// Background presence. Cold Storage is a menu-bar app: it runs quietly with NO
+// Dock icon (and no app menu), and the Dock icon appears only while a window is
+// open. Everything keeps backing up whether or not a window is showing.
+// ---------------------------------------------------------------------------
+function hideDock() {
+  if (process.platform === "darwin" && app.dock) {
+    try {
+      app.dock.hide();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+function showDock() {
+  if (process.platform === "darwin" && app.dock) {
+    try {
+      app.dock.show();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// Accounts that need exactly one human click to keep backing up — an expired
+// sign-in, or a "finish this in the window" step. A scheduled background run
+// can produce this with no window open, so it must reach the user on its own.
+function accountsNeedingAttention() {
+  return accountsPayload().filter(
+    (a) =>
+      a.connected &&
+      (a.attention || a.lastResult === "attention" || a.lastResult === "reconnect")
+  );
+}
+
+let attentionReminderTimer = null;
+let lastAttentionNotify = 0;
+let knownAttentionIds = new Set();
+const ATTENTION_REMINDER_MS = 3 * 60 * 60 * 1000; // re-nudge every 3 hours
+
+// Menu-bar marker + tooltip, and an immediate nudge the moment a NEW account
+// starts needing a click. Called on every account-state change.
+function refreshAttentionSurface() {
+  const need = accountsNeedingAttention();
+  if (tray) {
+    try {
+      tray.setTitle(need.length ? " ●" : "");
+      tray.setToolTip(
+        need.length
+          ? `Cold Storage — ${need.length} account${need.length > 1 ? "s" : ""} need a quick click`
+          : "Cold Storage"
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+  const ids = new Set(need.map((a) => a.id));
+  const isNew = [...ids].some((id) => !knownAttentionIds.has(id));
+  knownAttentionIds = ids;
+  if (isNew) remindAttention(true);
+}
+
+// Tell the user something needs a click. Clicking the notification opens the
+// app and surfaces the exact step, so it's one tap to resolve. Throttled so it
+// nudges rather than spams.
+function remindAttention(force = false) {
+  const need = accountsNeedingAttention();
+  if (!need.length) {
+    lastAttentionNotify = 0;
+    return;
+  }
+  const now = Date.now();
+  if (!force && now - lastAttentionNotify < ATTENTION_REMINDER_MS) return;
+  lastAttentionNotify = now;
+  const names = need.map((a) => a.name).join(", ");
+  notify(
+    need.length === 1
+      ? `${need[0].name} needs a quick click`
+      : `${need.length} accounts need a quick click`,
+    `Open Cold Storage to finish — then backups keep running on their own. (${names})`,
+    () => {
+      showMainWindow();
+      if (need[0]) automation.runSync(need[0].id, { interactive: true });
+    }
+  );
+}
+
+function startAttentionReminders() {
+  if (attentionReminderTimer) clearInterval(attentionReminderTimer);
+  // Check often (cheap); the notification itself is throttled to every ~3h.
+  attentionReminderTimer = setInterval(() => {
+    refreshAttentionSurface();
+    remindAttention();
+  }, 30 * 60 * 1000);
+  if (attentionReminderTimer.unref) attentionReminderTimer.unref();
+}
+
 function createTray() {
   if (tray) return;
   try {
@@ -915,6 +1024,7 @@ function createTray() {
     tray.setToolTip("Cold Storage");
     tray.on("click", () => tray.popUpContextMenu());
     updateTrayMenu();
+    refreshAttentionSurface();
   } catch {
     /* tray is a nicety; the app still works without it */
   }
@@ -954,6 +1064,7 @@ function cancelServeIdleStop() {
 
 async function showMainWindow() {
   cancelServeIdleStop();
+  showDock(); // a visible window gets a Dock icon + app menu; hidden again on close
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -1169,6 +1280,7 @@ function savedBounds() {
 }
 
 function createWindow() {
+  showDock(); // window visible → show the Dock icon (hidden again when it closes)
   const b = savedBounds() || {};
   mainWindow = new BrowserWindow({
     width: b.width || 1280,
@@ -1213,7 +1325,12 @@ function createWindow() {
     }
   });
 
-  mainWindow.on("close", rememberBounds);
+  mainWindow.on("close", () => {
+    rememberBounds();
+    // Back to the menu bar: drop the Dock icon so it's invisible while it keeps
+    // backing up in the background. Skip during a real quit.
+    if (!quitting) hideDock();
+  });
   mainWindow.on("closed", () => {
     mainWindow = null;
     scheduleServeIdleStop(); // reclaim the viewer process once idle
@@ -1394,9 +1511,14 @@ if (!gotLock) {
     // Launched by the login item? Stay out of the way: no window, just the
     // menu bar. The user asked for this to be invisible until it matters.
     const openedAtLogin = app.getLoginItemSettings().wasOpenedAtLogin;
-    if (serveUrl && !openedAtLogin) createWindow();
+    if (serveUrl && !openedAtLogin) {
+      createWindow(); // fresh launch → show the window (createWindow shows the Dock icon)
+    } else {
+      hideDock(); // launched hidden at login (or viewer not ready) → menu-bar only
+    }
     createTray();
     startScheduler();
+    startAttentionReminders();
     watchDownloads();
   });
 
@@ -1434,6 +1556,7 @@ if (!gotLock) {
   app.on("will-quit", () => {
     quitting = true;
     if (schedulerTimer) clearInterval(schedulerTimer);
+    if (attentionReminderTimer) clearInterval(attentionReminderTimer);
     if (downloadsWatcher) {
       try {
         downloadsWatcher.close();
