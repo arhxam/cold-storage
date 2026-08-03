@@ -107,6 +107,20 @@ class KeyManager:
         return cipher
 
     # -- OS keychain cache ---------------------------------------------------
+    def _keyring_user(self) -> str:
+        """A keychain account name unique to THIS archive.
+
+        The cache used to live under one fixed account ("master-key"), so a
+        second ``init`` — a reinstall pointed at a fresh home, a test/dev run, a
+        different COLD_HOME — silently overwrote the first archive's key,
+        leaving its media undecryptable. Keying the cache to the archive's home
+        path makes every archive independent. ``_KEYRING_USER`` stays as a
+        read-only fallback so existing installs keep unlocking, then migrate.
+        """
+        home = str(self.keys_dir.resolve().parent)
+        tag = hashlib.sha256(home.encode("utf-8")).hexdigest()[:16]
+        return f"{_KEYRING_USER}-{tag}"
+
     def cache_in_keychain(self, cipher: Cipher) -> bool:
         if os.environ.get("COLD_NO_KEYRING"):
             return False
@@ -117,7 +131,7 @@ class KeyManager:
         try:
             master = cipher._key  # noqa: SLF001 — intentional internal access
             keyring.set_password(
-                _KEYRING_SERVICE, _KEYRING_USER, base64.b64encode(master).decode()
+                _KEYRING_SERVICE, self._keyring_user(), base64.b64encode(master).decode()
             )
             return True
         except Exception:
@@ -130,26 +144,29 @@ class KeyManager:
             import keyring
         except ImportError:
             return None
-        stored = None
-        try:
-            stored = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USER)
-        except Exception:
-            return None
-        if not stored:
-            # Pre-rename installs cached the key under the old service name.
-            # Without this the archive would look permanently locked and the
-            # user would be told to dig out their Recovery Kit for no reason.
+
+        # This archive's own entry first; then the legacy shared account, and
+        # finally the pre-rename service. Migrate a hit from a fallback forward.
+        per_archive = self._keyring_user()
+        candidates = [
+            (_KEYRING_SERVICE, per_archive),
+            (_KEYRING_SERVICE, _KEYRING_USER),
+            (_LEGACY_KEYRING_SERVICE, _KEYRING_USER),
+        ]
+        for service, user in candidates:
             try:
-                stored = keyring.get_password(_LEGACY_KEYRING_SERVICE, _KEYRING_USER)
+                stored = keyring.get_password(service, user)
             except Exception:
                 return None
             if not stored:
-                return None
-            # Re-cache under the new name so this lookup only happens once.
-            # Reading worked; failing to write it forward is not fatal.
-            with suppress(Exception):
-                keyring.set_password(_KEYRING_SERVICE, _KEYRING_USER, stored)
-        return Cipher(base64.b64decode(stored))
+                continue
+            if (service, user) != (_KEYRING_SERVICE, per_archive):
+                # Re-cache under this archive's own account so the shared/legacy
+                # slot is never consulted (or clobbered) again.
+                with suppress(Exception):
+                    keyring.set_password(_KEYRING_SERVICE, per_archive, stored)
+            return Cipher(base64.b64decode(stored))
+        return None
 
     # -- internals -----------------------------------------------------------
     def _scrypt_n(self) -> int:

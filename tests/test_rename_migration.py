@@ -74,19 +74,45 @@ def test_key_cached_under_the_old_name_still_unlocks(tmp_path, monkeypatch):
     monkeypatch.setitem(__import__("sys").modules, "keyring", fake)
     monkeypatch.delenv("COLD_NO_KEYRING", raising=False)
 
-    cipher = KeyManager(tmp_path / "keys").unlock_from_keychain()
+    km = KeyManager(tmp_path / "keys")
+    cipher = km.unlock_from_keychain()
     assert cipher is not None, "the pre-rename cached key must still work"
     blob = cipher.encrypt(b"hello")
     assert Cipher(key).decrypt(blob) == b"hello", "it must be the same key"
 
-    # And it should be copied forward so the fallback only runs once.
-    assert fake.store.get((_KEYRING_SERVICE, "master-key")) is not None
+    # And it should be copied forward to THIS archive's own per-home account so
+    # the shared/legacy fallback is only consulted once.
+    assert fake.store.get((_KEYRING_SERVICE, km._keyring_user())) is not None
 
 
 def test_no_cached_key_anywhere_returns_none(tmp_path, monkeypatch):
     monkeypatch.setitem(__import__("sys").modules, "keyring", _FakeKeyring())
     monkeypatch.delenv("COLD_NO_KEYRING", raising=False)
     assert KeyManager(tmp_path / "keys").unlock_from_keychain() is None
+
+
+def test_two_archives_never_share_a_keychain_slot(tmp_path, monkeypatch):
+    """A second archive's cached key must NOT overwrite the first's.
+
+    This is the regression guard for the shared-account bug that once left an
+    archive's media undecryptable after a second init on the same machine.
+    """
+    monkeypatch.setenv("COLD_SCRYPT_N", "16384")  # keep the KDF fast in tests
+    monkeypatch.setitem(__import__("sys").modules, "keyring", _FakeKeyring())
+    monkeypatch.delenv("COLD_NO_KEYRING", raising=False)
+
+    a = KeyManager(tmp_path / "archive-a" / "keys")
+    b = KeyManager(tmp_path / "archive-b" / "keys")
+    cipher_a, _ = a.create("passphrase-a")
+    a.cache_in_keychain(cipher_a)
+    cipher_b, _ = b.create("passphrase-b")  # a second init — the old bug's trigger
+    b.cache_in_keychain(cipher_b)
+
+    assert cipher_a._key != cipher_b._key  # noqa: SLF001
+    assert a._keyring_user() != b._keyring_user()
+    # Each archive still unlocks to its OWN key — no clobbering.
+    assert a.unlock_from_keychain()._key == cipher_a._key  # noqa: SLF001
+    assert b.unlock_from_keychain()._key == cipher_b._key  # noqa: SLF001
 
 
 def test_app_migrates_the_old_electron_user_data():

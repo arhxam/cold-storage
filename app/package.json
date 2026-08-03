@@ -1,7 +1,7 @@
 {
   "name": "cold-storage",
   "productName": "Cold Storage",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Local-first backup for your own social-media data. No server.",
   "main": "main.js",
   "license": "MIT",
