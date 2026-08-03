@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tarfile
 import zipfile
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -48,22 +49,46 @@ def load_json(path: Path, *, fix_mojibake: bool = False) -> object:
 
 
 def ensure_unpacked(path: Path, dest: Path) -> Path:
-    """If ``path`` is a .zip, extract it into ``dest`` and return the dir.
+    """If ``path`` is an archive, extract it into ``dest`` and return the dir.
 
-    Otherwise return ``path`` unchanged. Guards against zip-slip.
+    Handles ``.zip`` (Instagram, Facebook, X, Discord, Snapchat, LinkedIn,
+    Reddit, Slack, WhatsApp) and ``.tar.gz``/``.tgz``/``.tar`` (Google Takeout
+    can deliver either). Otherwise returns ``path`` unchanged. Guards against
+    zip-slip / tar path traversal.
     """
     path = Path(path)
     if path.is_dir():
         return path
-    if path.suffix.lower() == ".zip" and zipfile.is_zipfile(path):
+
+    if zipfile.is_zipfile(path):
         dest.mkdir(parents=True, exist_ok=True)
+        dest_root = str(dest.resolve())
         with zipfile.ZipFile(path) as zf:
             for member in zf.namelist():
                 target = (dest / member).resolve()
-                if not str(target).startswith(str(dest.resolve())):
+                if not str(target).startswith(dest_root):
                     raise ValueError(f"unsafe path in zip: {member}")
             zf.extractall(dest)
         return dest
+
+    # Google Takeout (and some others) can be a gzipped/plain tarball. is_tarfile
+    # sniffs the bytes, so a .tgz named without a suffix is still recognized.
+    if tarfile.is_tarfile(path):
+        dest.mkdir(parents=True, exist_ok=True)
+        dest_root = str(dest.resolve())
+        with tarfile.open(path) as tf:
+            for member in tf.getmembers():
+                target = (dest / member.name).resolve()
+                if not str(target).startswith(dest_root):
+                    raise ValueError(f"unsafe path in tar: {member.name}")
+            # `filter="data"` (3.12+) blocks absolute paths, device files and
+            # unsafe links — belt-and-suspenders with the check above.
+            try:
+                tf.extractall(dest, filter="data")
+            except TypeError:  # older Pythons without the filter kwarg
+                tf.extractall(dest)
+        return dest
+
     return path
 
 

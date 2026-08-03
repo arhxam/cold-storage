@@ -713,8 +713,16 @@ function startScheduler() {
 // delivers by email link), dropping it in ~/Downloads is enough.
 // ---------------------------------------------------------------------------
 
+// Matches the real filenames each platform hands you, so a downloaded export is
+// picked up on its own. Deliberately liberal: a false positive costs one failed
+// ingest attempt (then it's remembered and never retried), while a miss silently
+// loses a backup — the exact failure this app exists to prevent.
+//   instagram-… facebook-… twitter-… x-… (Meta/X)   takeout-…/.tgz (Google)
+//   package.zip (Discord)   mydata~….zip (Snapchat)   export_… (Reddit)
+//   …LinkedInDataExport… (LinkedIn)   … Slack export … (Slack)
+//   WhatsApp Chat … (WhatsApp)   Telegram… (Telegram)
 const EXPORT_RE =
-  /(instagram|facebook|twitter|^x-|discord|telegram|whatsapp|reddit|snapchat|linkedin|slack|takeout|your[-_]?data|data[-_]?export)/i;
+  /(instagram|facebook|twitter|^x-|discord|telegram|whatsapp|reddit|snapchat|linked ?in|slack|takeout|mydata|gdpr|^package\b|^export[-_]|your[-_]?data|data[-_]?export)/i;
 let downloadsWatcher = null;
 const pendingDownloads = new Map(); // name -> timer (debounce; bounded by dir size)
 // Files the engine says it can never read (e.g. an HTML export where JSON was
@@ -740,7 +748,13 @@ function watchDownloads() {
   const inFlight = new Set(); // being ingested right now — don't double-submit
 
   const consider = (name) => {
-    if (!name || !name.toLowerCase().endsWith(".zip")) return;
+    if (!name) return;
+    const lname = name.toLowerCase();
+    // Archives every platform uses, plus a bare WhatsApp chat .txt.
+    const isArchive =
+      lname.endsWith(".zip") || lname.endsWith(".tgz") || lname.endsWith(".tar.gz");
+    const isWhatsAppTxt = lname.endsWith(".txt") && /whatsapp|_chat/i.test(name);
+    if (!isArchive && !isWhatsAppTxt) return;
     if (!EXPORT_RE.test(name) || seen.has(name) || inFlight.has(name)) return;
     // Partial downloads: browsers write these then rename to the real name.
     if (/\.(crdownload|part|download|tmp)$/i.test(name)) return;
