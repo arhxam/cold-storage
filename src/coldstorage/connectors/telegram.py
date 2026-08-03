@@ -12,6 +12,7 @@ from pathlib import Path
 
 from ..models import Batch, MediaRef, NormalizedRecord, RecordType
 from .base import Connector, load_json, register
+from .telegram_html import parse_html_chats
 
 
 def _extract_text(text) -> str | None:
@@ -38,6 +39,8 @@ class TelegramConnector(Connector):
     provides = ["messages", "media"]
 
     def detect(self, path: Path) -> bool:
+        path = Path(path)
+        # JSON export.
         for f in [path / "result.json", *path.glob("**/result.json")]:
             if f.exists():
                 try:
@@ -48,10 +51,17 @@ class TelegramConnector(Connector):
                     "chats" in data or ("messages" in data and "type" in data)
                 ):
                     return True
-        return False
+        # HTML export (Telegram Desktop's default): export_results.html at the
+        # root, or the chats/chat_N/messages.html layout.
+        if (path / "export_results.html").exists() or any(
+            path.glob("**/export_results.html")
+        ):
+            return True
+        return any(path.glob("**/chats/*/messages.html"))
 
     def parse_export(self, path: Path) -> Iterator[Batch]:
         root = Path(path)
+        # JSON rail.
         for f in [root / "result.json", *root.glob("**/result.json")]:
             if not f.exists():
                 continue
@@ -64,6 +74,8 @@ class TelegramConnector(Connector):
             elif "messages" in data:
                 yield from self._parse_chat(data, f.parent)
             break
+        # HTML rail (Telegram Desktop's default export format).
+        yield from parse_html_chats(root, self.id)
 
     def _parse_chat(self, chat: dict, root: Path) -> Iterator[Batch]:
         name = chat.get("name") or str(chat.get("id") or "chat")

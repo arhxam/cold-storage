@@ -241,7 +241,13 @@ def parse_html_followers(root: Path, connector: str) -> Iterator[Batch]:
 def parse_html_posts(root: Path, connector: str) -> Iterator[Batch]:
     """Posts + reels from the HTML content section, with their media."""
     root = Path(root)
-    globs = ["**/content/posts*.html", "**/media/posts*.html", "**/content/reels.html"]
+    globs = [
+        "**/content/posts*.html",  # Instagram
+        "**/media/posts*.html",
+        "**/content/reels.html",
+        "**/your_posts__*.html",  # Facebook: your_posts__check_ins__photos_and_videos_N.html
+        "**/posts/your_posts*.html",
+    ]
     files: list[Path] = []
     for g in globs:
         files += list(root.glob(g))
