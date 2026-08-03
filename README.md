@@ -1,15 +1,17 @@
 <div align="center">
 
-<img src="assets/logo/cold-storage-mark-256.png" alt="Cold Storage" width="112" height="112">
+<img src="assets/logo/cold-storage-mark-256.png" alt="Cold Storage — private social media backup app for Mac" width="112" height="112">
 
 # Cold Storage
 
-**A cold copy of your social media. On your machine, not their servers.**
+**A cold copy of your social media — a private, encrypted backup on your Mac, not their servers.**
 
-Connect an account once. It requests your official export, downloads it, and keeps an
-encrypted, searchable copy on your Mac — on a schedule, in the background, forever.
-Instagram, Facebook, X, Google, Snapchat, LinkedIn and Reddit automatically; Discord,
-Telegram, WhatsApp and Slack by hand.
+Automatically **back up and archive your Instagram, WhatsApp, Facebook, X/Twitter, Snapchat,
+Telegram, Reddit, Google and more** — DMs, photos, followers and posts — into an encrypted,
+searchable copy on your Mac, on a schedule, in the background, forever. Connect an account once
+and it requests your **official data export**, downloads it, and files it away. No scraping (so
+no risk to your account), no servers, no cloud. Instagram, Facebook, X, Google, Snapchat,
+LinkedIn and Reddit run automatically; Discord, Telegram, WhatsApp and Slack you add by hand.
 
 <a href="https://github.com/arhxam/cold-storage/releases/latest/download/ColdStorage-macOS-arm64.dmg"><img src="https://img.shields.io/badge/⬇%20Download%20for%20Mac-Apple%20Silicon%20·%20free-0a84ff?style=for-the-badge&logoColor=white" alt="Download Cold Storage for Mac" height="46"></a>
 
