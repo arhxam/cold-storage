@@ -851,14 +851,17 @@ function watchDownloads() {
 // window. That is the whole point of "it just happens in the background".
 // ---------------------------------------------------------------------------
 
+// A 44x44 (@2x → 22pt) black-on-transparent PNG of the container mark, filled
+// solid. It MUST be a raster image: Electron's nativeImage does not rasterize an
+// SVG data URL on macOS, which produced an empty (invisible) menu-bar icon.
+// Template image = macOS recolours it for light/dark bars; only alpha matters.
+const TRAY_PNG_B64 =
+  "iVBORw0KGgoAAAANSUhEUgAAACwAAAAsCAYAAAAehFoBAAAAk0lEQVR42u3YQQ6AIAxEUW7G0Xq0Hg1ZuCLGqLTQmj9J9y/aBIZSCCGEZI/0aX00OrSeyDaMRMReQcepkX7/09Fd8PoSunVNZBK7HG4JXrIm1mB3uBfYbU28webwVWAzNGDAgAH/DJzy8Eh7TN9Vo/DXTw94uvtyqmayrftp5K86U1pDPrxIpOr/5eFFCiGEkNQ5AESAD+3ARWftAAAAAElFTkSuQmCC";
+
 function trayIcon() {
-  // A 16pt template shield, drawn inline so we ship no extra asset.
-  // The container mark, flattened to one colour: a template image is a mask,
-  // so macOS recolours it for light/dark menu bars and only the alpha matters.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><polygon points="1.27,4.93 15.44,13.12 15.44,23.28 1.27,15.10" fill="black" opacity=".55"/><polygon points="15.44,13.12 22.73,8.90 22.73,19.07 15.44,23.28" fill="black" opacity=".8"/><polygon points="8.56,0.72 22.73,8.90 15.44,13.12 1.27,4.93" fill="black"/></svg>`;
-  const img = nativeImage.createFromDataURL(
-    "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64")
-  );
+  const img = nativeImage.createFromBuffer(Buffer.from(TRAY_PNG_B64, "base64"), {
+    scaleFactor: 2,
+  });
   img.setTemplateImage(true); // follows light/dark menu bar automatically
   return img;
 }
@@ -926,6 +929,10 @@ function updateTrayMenu() {
 // open. Everything keeps backing up whether or not a window is showing.
 // ---------------------------------------------------------------------------
 function hideDock() {
+  // Safety: never hide the Dock icon unless the menu-bar tray is actually up.
+  // Without a tray, hiding the Dock would leave the app with NO way to open or
+  // quit it (invisible and only killable from Activity Monitor).
+  if (!tray) return;
   if (process.platform === "darwin" && app.dock) {
     try {
       app.dock.hide();
@@ -1327,9 +1334,23 @@ function createWindow() {
 
   mainWindow.on("close", () => {
     rememberBounds();
+    if (quitting) return;
     // Back to the menu bar: drop the Dock icon so it's invisible while it keeps
-    // backing up in the background. Skip during a real quit.
-    if (!quitting) hideDock();
+    // backing up in the background.
+    hideDock();
+    // The first time, say plainly that closing did NOT quit — it lives in the
+    // menu bar, still backing up, and can be opened or quit from there. So the
+    // choice is the user's and nothing feels like it vanished.
+    const s = loadSettings();
+    if (!s.prefs.closeHintShown) {
+      s.prefs.closeHintShown = true;
+      saveSettings();
+      notify(
+        "Cold Storage is still running",
+        "It keeps backing up from the menu bar (top-right). Click the icon there to open it or quit.",
+        () => showMainWindow()
+      );
+    }
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -1511,12 +1532,14 @@ if (!gotLock) {
     // Launched by the login item? Stay out of the way: no window, just the
     // menu bar. The user asked for this to be invisible until it matters.
     const openedAtLogin = app.getLoginItemSettings().wasOpenedAtLogin;
+    // The tray is the app's persistent presence — create it BEFORE any hideDock
+    // so the menu bar always has us, even when launched hidden at login.
+    createTray();
     if (serveUrl && !openedAtLogin) {
       createWindow(); // fresh launch → show the window (createWindow shows the Dock icon)
     } else {
       hideDock(); // launched hidden at login (or viewer not ready) → menu-bar only
     }
-    createTray();
     startScheduler();
     startAttentionReminders();
     watchDownloads();
